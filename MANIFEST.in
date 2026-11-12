@@ -15,7 +15,6 @@ prune dashboard
 prune .opencode
 prune data
 prune scripts
-prune skill
 prune testing screenshots
 prune tools
 prune tests

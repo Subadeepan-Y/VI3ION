@@ -1,5 +1,8 @@
 # VI3ION — Measured Visual Perception for AI Agents
 
+[![CI](https://github.com/SUBADEEPAN-Y/VI3ION/actions/workflows/ci.yml/badge.svg)](https://github.com/SUBADEEPAN-Y/VI3ION/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 VI3ION is a local perception engine for AI agents. It reads images, screenshots
 and diagrams, and returns **measured evidence** instead of guesses: OCR text
 with pixel coordinates, geometry, per-element colours with contrast ratios,
@@ -77,7 +80,8 @@ product:
 |---|---|
 | **Core** | Agent-independent perception pipeline (Python). Pure computation: ingestion → pixels → geometry → OCR → spatial relations → verification → text brief. |
 | **Adapter** | MCP server (stdio) exposing 11 tools. This is what the coding agent talks to. |
-| **Skill** | Written instructions (`vi3ion/skill/SKILL.md`) telling the agent *when and how* to call the tools. |
+| **Skill** | Written instructions (`vi3ion/skill/SKILL.md`, also registered with OpenCode) telling the agent *when and how* to call the tools. |
+| **Plugin** | Optional OpenCode plugin (`@vi3ion/opencode`) that measures attached images automatically and introduces Vi3ion to the agent. |
 | **Dashboard** | Local React dev dashboard (`dashboard/`) for testing and inspecting evidence. Never required in production. |
 
 ## Quickstart

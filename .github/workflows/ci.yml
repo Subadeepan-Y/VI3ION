@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.12", "3.13"]
+        exclude:
+          # Keep the matrix small enough to stay fast: every OS is covered,
+          # every Python version is covered.
+          - { os: windows-latest, python: "3.11" }
+          - { os: windows-latest, python: "3.13" }
+          - { os: macos-latest, python: "3.11" }
+          - { os: macos-latest, python: "3.12" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Tests
+        run: python -m pytest -q
+      - name: Fidelity floor
+        run: python scripts/ci_check.py --fidelity
+
+  package:
+    name: Build & publish-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]" build twine
+      - name: Build
+        run: python -m build
+      - name: twine check
+        run: python -m twine check dist/*
+      - name: Clean install (no extras) must serve the MCP tools
+        run: python scripts/ci_check.py --clean-install dist/*.whl
+
+  plugin:
+    name: OpenCode plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install plugin deps
+        working-directory: plugins/opencode
+        run: npm install
+      - name: Smoke test
+        working-directory: plugins/opencode
+        run: node smoke.mjs
+      - name: Pack
+        working-directory: plugins/opencode
+        run: npm pack --dry-run

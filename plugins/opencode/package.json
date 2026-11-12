@@ -1,0 +1,49 @@
+{
+  "name": "@vi3ion/opencode",
+  "version": "0.1.0",
+  "description": "Measured visual perception for OpenCode agents: OCR, geometry, per-element colour and version diffing, injected automatically.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./skill": "./SKILL.md"
+  },
+  "files": [
+    "index.js",
+    "SKILL.md",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "mcp",
+    "vision",
+    "ocr",
+    "perception",
+    "screenshot",
+    "agents",
+    "llm",
+    "local-first"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SUBADEEPAN-Y/VI3ION.git",
+    "directory": "plugins/opencode"
+  },
+  "homepage": "https://github.com/SUBADEEPAN-Y/VI3ION#readme",
+  "bugs": {
+    "url": "https://github.com/SUBADEEPAN-Y/VI3ION/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@opencode/plugin": "latest"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

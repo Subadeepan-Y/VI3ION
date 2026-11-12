@@ -45,3 +45,11 @@ Thumbs.db
 # Local agent notes (not part of the release)
 CONTINUATION.md
 VI3ION_OUTPUT.md
+
+# npm artifacts
+*.tgz
+plugins/opencode/node_modules/
+
+# release artifacts
+dist/
+build/
