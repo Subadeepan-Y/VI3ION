@@ -33,7 +33,16 @@ jobs:
         run: npm pack --dry-run
       - name: Publish
         if: ${{ github.event_name == 'release' || inputs.dry_run == false }}
-        run: npm publish --access public --provenance
+        run: |
+          if [ -n "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "publishing with the NPM_TOKEN secret"
+            npm publish --access public --provenance
+          else
+            # No token: npm exchanges the runner's OIDC identity for a
+            # short-lived publish token (Trusted Publishing).
+            echo "publishing with npm Trusted Publishing (OIDC)"
+            npm publish --access public --provenance --omit=optional
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Verify
