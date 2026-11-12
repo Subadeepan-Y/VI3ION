@@ -1048,6 +1048,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    # Windows consoles often use a legacy code page (cp1252): reconfigure so
+    # printing a non-ASCII character never crashes the command.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:  # noqa: BLE001 - older streams have no reconfigure
+            pass
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)
