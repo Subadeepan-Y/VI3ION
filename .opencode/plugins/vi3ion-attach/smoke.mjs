@@ -432,6 +432,33 @@ assert.ok(onRequest.includes("vi3ion-auto"), "re-enabled: evidence block missing
   assert.strictEqual(reloaded, 0, "connected: unexpected MCP reload");
 }
 
+// --- 17. a failed MCP server is re-registered (what actually restarts it) ---
+{
+  let reloaded = 0;
+  let updated = null;
+  let seenConfig = null;
+  const healCtx = makeCtx({ providerID: "inception", id: "mercury-3" });
+  healCtx.mcp = {
+    async reload() { reloaded += 1; },
+    async list() { return { data: [{ name: "vi3ion", status: "failed" }] }; },
+    async transform(fn) {
+      const config = { type: "local", command: ["python.exe", "-m", "vi3ion.mcp_server"] };
+      const editor = {
+        get: () => config,
+        update: (name, updater) => { updated = name; updater(config); },
+        set: () => {},
+        remove: () => {},
+      };
+      fn(editor);
+      seenConfig = config;
+    },
+  };
+  await plugin.setup(healCtx);
+  assert.strictEqual(reloaded, 1, "heal: the MCP config was not reloaded");
+  assert.strictEqual(updated, "vi3ion", "heal: the vi3ion server entry was not re-registered");
+  assert.ok(seenConfig && seenConfig.disabled === false, "heal: the server was not re-enabled");
+}
+
 // --- 17. a plugin bug inside a hook must never break the session ---
 {
   const brokenCtx = makeCtx({ providerID: "inception", id: "mercury-3" });

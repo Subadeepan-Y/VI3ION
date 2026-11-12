@@ -693,6 +693,34 @@ function safeText(value) {
   }
 }
 
+// Bring a dead MCP server back.
+//   1. reload the MCP config
+//   2. re-set the server entry: OpenCode restarts a server when its
+//      configuration changes, but not when the config is merely reloaded
+async function respawnMcpServer(ctx) {
+  if (!ctx.mcp || typeof ctx.mcp.reload !== "function") return false;
+  await ctx.mcp.reload();
+  try {
+    if (ctx.mcp.transform && typeof ctx.mcp.transform === "function") {
+      await ctx.mcp.transform((editor) => {
+        const config = editor.get("vi3ion");
+        if (!config) return;
+        // A real change is what makes OpenCode restart a server; re-setting an
+        // identical config is a no-op.
+        editor.update("vi3ion", (current) => {
+          if (current && typeof current === "object") {
+            current.disabled = false;
+          }
+        });
+      });
+      return true;
+    }
+  } catch (error) {
+    console.error(`[vi3ion-attach] MCP re-registration failed: ${error && error.message}`);
+  }
+  return false;
+}
+
 // Bring a dead Vi3ion MCP server back without an editor restart.
 // MCP servers are spawned when the editor starts; if one dies (an upgrade
 // replaced it, it was killed), OpenCode does not retry on its own.
@@ -707,8 +735,8 @@ async function reloadMcpIfStale(ctx) {
   }
   try {
     if (ctx.mcp && typeof ctx.mcp.reload === "function") {
-      await ctx.mcp.reload();
-      console.error("[vi3ion-attach] Vi3ion MCP tools missing: asked OpenCode to reload the MCP servers");
+      await respawnMcpServer(ctx);
+      console.error("[vi3ion-attach] Vi3ion MCP tools missing: asked OpenCode to restart the MCP servers");
       return true;
     }
   } catch (error) {
@@ -1397,6 +1425,38 @@ export default Plugin.define({
           text: `data dir: ${dataDir()} · mode: ${mode} · python: ${pythonPath() || "not found"}`,
         },
       ],
+    }).catch(() => {});
+
+    // Self-heal: MCP servers are spawned when the editor starts. If the Vi3ion
+    // server died (an upgrade replaced it, it was killed), ask OpenCode to
+    // reload the MCP servers so it comes back without an editor restart.
+    let heal = "not attempted";
+    try {
+      const status = await vi3ionMcpStatus(ctx);
+      heal = `status=${status.status} found=${status.found}`;
+      if (
+        status.found &&
+        status.status !== "connected" &&
+        status.status !== "pending" &&
+        ctx.mcp &&
+        typeof ctx.mcp.reload === "function"
+      ) {
+        const last = Number(await ctx.storage.get(MCP_RELOAD_KEY)) || 0;
+        if (Date.now() - last > 15000) {
+          await ctx.storage.set(MCP_RELOAD_KEY, Date.now());
+          await respawnMcpServer(ctx);
+          heal += " -> respawn requested";
+        } else {
+          heal += " -> respawn skipped (cooldown)";
+        }
+      }
+    } catch (error) {
+      heal = `error: ${error && error.message}`;
+    }
+    await recordInjection({
+      session_id: "plugin",
+      reason: "mcp self-heal",
+      blocks: [{ key: "vi3ion-mcp-heal", chars: 0, text: heal }],
     }).catch(() => {});
 
     // Persistent presence: appended to the system instructions of every model

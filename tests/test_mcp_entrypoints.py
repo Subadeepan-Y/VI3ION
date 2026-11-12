@@ -10,12 +10,13 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parents[1]
 
 
-def _handshake(module: str) -> dict:
+def _handshake(module: str, attempts: int = 3) -> dict:
     env = os.environ.copy()
     env["VI3ION_ALLOWED_ROOTS"] = str(PROJECT)
     payload = (
@@ -37,25 +38,31 @@ def _handshake(module: str) -> dict:
         + json.dumps({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
         + "\n"
     )
-    proc = subprocess.run(
-        [sys.executable, "-m", module],
-        input=payload,
-        capture_output=True,
-        text=True,
-        timeout=90,
-        cwd=str(PROJECT),
-        env=env,
-    )
-    assert proc.returncode == 0, f"{module} exited {proc.returncode}: {proc.stderr[-400:]}"
-    tools = 0
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if not line.startswith("{"):
-            continue
-        message = json.loads(line)
-        if message.get("id") == 2:
-            tools = len((message.get("result") or {}).get("tools") or [])
-    return {"tools": tools, "stderr": proc.stderr}
+    last_error = ""
+    for _ in range(attempts):
+        proc = subprocess.run(
+            [sys.executable, "-m", module],
+            input=payload,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(PROJECT),
+            env=env,
+        )
+        assert proc.returncode == 0, f"{module} exited {proc.returncode}: {proc.stderr[-400:]}"
+        tools = 0
+        for line in proc.stdout.splitlines():
+            line = line.strip()
+            if not line.startswith("{"):
+                continue
+            message = json.loads(line)
+            if message.get("id") == 2:
+                tools = len((message.get("result") or {}).get("tools") or [])
+        if tools:
+            return {"tools": tools, "stderr": proc.stderr}
+        last_error = (proc.stderr or "")[-200:]
+        time.sleep(1.0)
+    raise AssertionError(f"{module} listed no tools after {attempts} attempts: {last_error}")
 
 
 def test_current_entry_point_serves_tools():
