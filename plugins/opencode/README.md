@@ -1,3 +1,65 @@
+# @vi3ion/opencode
+
+The OpenCode plugin for [VI3ION](https://github.com/Subadeepan-Y/VI3ION) — a
+local perception engine that measures images (OCR, geometry, per-element colour,
+version diffs) and hands the results to your agent.
+
+## Install
+
+```bash
+npm i -D @vi3ion/opencode
+```
+
+The plugin needs the VI3ION engine (Python 3.11+):
+
+```bash
+pip install vi3ion
+```
+
+Then register the MCP server in `~/.config/opencode/opencode.jsonc`:
+
+```jsonc
+{
+  "mcp": {
+    "VI3ION": {
+      "type": "local",
+      "command": ["python", "-m", "vi3ion.mcp_server"],
+      "environment": { "VI3ION_ALLOWED_ROOTS": "C:/path/to/your/project" }
+    }
+  },
+  "plugin": ["@vi3ion/opencode"]
+}
+```
+
+The key is the server's **display name** and becomes the tool namespace
+(`VI3ION.inspect_image`). `vi3ion` works just as well.
+
+## What it does
+
+- **Measures every attached image** and attaches the evidence to the request —
+  the agent never has to think about it
+- **Introduces itself** on the first prompt and asks the agent whether it has
+  native vision, so a vision-less model knows Vi3ion is its eyes
+- **Re-binds on a model switch**: the new model is told the role again
+- **Keeps the role across compaction**, so a summarised conversation still
+  knows Vi3ion exists
+- **Remembers every image** and can diff two states of the same screen
+- **Self-heals**: if the MCP server dies, the plugin restarts it
+
+Everything runs locally: no image leaves your machine.
+
+## Documentation
+
+- [Plugin behaviour](https://github.com/Subadeepan-Y/VI3ION/blob/main/plugins/opencode/README.md)
+- [OpenCode setup guide](https://github.com/Subadeepan-Y/VI3ION/blob/main/adapters/opencode/README.md)
+- [Local models (Ollama, llama.cpp, LM Studio, vLLM)](https://github.com/Subadeepan-Y/VI3ION/blob/main/LOCAL_MODELS.md)
+
+## License
+
+Apache-2.0
+
+---
+
 # Vi3ion auto-attach plugin
 
 ## Behavior guarantees
