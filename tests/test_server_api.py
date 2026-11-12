@@ -1,10 +1,18 @@
-"""HTTP API smoke tests via FastAPI TestClient."""
+"""HTTP API smoke tests via FastAPI TestClient.
+
+The HTTP server is an optional extra (`pip install "vi3ion[dashboard]"`), so
+these tests skip when FastAPI is not installed instead of failing the suite.
+"""
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+import pytest
 
-from vi3ion.server.app import app
+pytest.importorskip("fastapi", reason="the HTTP API needs the [dashboard] extra")
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from vi3ion.server.app import app  # noqa: E402
 
 
 def _client():
