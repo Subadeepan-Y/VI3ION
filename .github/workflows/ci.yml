@@ -74,12 +74,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Install plugin deps
-        working-directory: plugins/opencode
-        run: npm install
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[ocr]"
+          cd plugins/opencode && npm install
+      - name: Locate python
+        run: echo "VI3ION_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
       - name: Smoke test
         working-directory: plugins/opencode
         run: node smoke.mjs
+        env:
+          # The smoke test measures a real image, so it needs an interpreter
+          # that has Vi3ion installed.
+          VI3ION_PYTHON: ${{ env.VI3ION_PYTHON }}
       - name: Pack
         working-directory: plugins/opencode
         run: npm pack --dry-run

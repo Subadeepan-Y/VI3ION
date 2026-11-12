@@ -21,10 +21,29 @@ process.env.VI3ION_DATA_DIR = SMOKE_DATA;
 
 const { default: plugin } = await import("./index.js");
 
-const IMG = "D:\\PROJECTS\\VI3ION\\tests\\fixtures\\sample_ui.png";
-const IMG_URI = "file:///D:/PROJECTS/VI3ION/tests/fixtures/sample_ui.png";
-const TRACE = "D:\\PROJECTS\\VI3ION\\data\\inbox\\last-injection.json";
-assert.ok(fs.existsSync(IMG), "sample image missing");
+// Locate the repository root (the package lives in plugins/opencode/) and the
+// sample image inside it. No absolute paths: the suite runs on any machine.
+function findRepoRoot(start) {
+  let current = start;
+  for (let depth = 0; depth < 6; depth += 1) {
+    if (fs.existsSync(path.join(current, "pyproject.toml"))) return current;
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return null;
+}
+
+const HERE = path.dirname(new URL(import.meta.url).pathname.replace(/^\//, ""));
+const REPO_DIR = findRepoRoot(HERE);
+const SAMPLE = REPO_DIR ? path.join(REPO_DIR, "tests", "fixtures", "sample_ui.png") : "";
+const IMG = SAMPLE;
+const IMG_URI = SAMPLE ? `file:///${SAMPLE.replace(/\\/g, "/")}` : "";
+const TRACE = path.join(SMOKE_DATA, "inbox", "last-injection.json");
+if (!SAMPLE || !fs.existsSync(SAMPLE)) {
+  console.log("SMOKE skipped (sample_ui.png not found - run from the repository)");
+  process.exit(0);
+}
 
 let hooks = {};
 let commands = [];

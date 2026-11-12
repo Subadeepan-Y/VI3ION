@@ -11,10 +11,13 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parents[1]
-PYTHON = PROJECT / ".venv" / "Scripts" / "python.exe"
+# Use the interpreter that runs the tests: a hardcoded .venv path only exists on
+# one machine.
+PYTHON = Path(sys.executable)
 
 
 def _spawn():

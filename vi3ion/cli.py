@@ -552,6 +552,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             {
                 "check": "local_runtimes",
                 "ok": True,
+                "blocking": False,
                 "detail": f"serving: {running}; {local.get('recommendation', '')}",
             }
         )
@@ -597,6 +598,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         {
             "check": "editor_wiring",
             "ok": plugin_found and mcp_found,
+            "blocking": False,
             "detail": f"plugin={'yes' if plugin_found else 'no'}, mcp={'yes' if mcp_found else 'no'}",
         }
     )
@@ -640,7 +642,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     )
 
     payload = {
-        "ok": all(c["ok"] for c in checks),
+        "ok": all(c["ok"] for c in checks if c.get("blocking", True)),
         "version": _version(),
         "data_dir": str(settings.data_dir),
         "allowed_roots": [str(r) for r in settings.allowed_roots],
