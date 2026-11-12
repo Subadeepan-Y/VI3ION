@@ -1,0 +1,8 @@
+{
+  "_comment": "Mock semantic fixtures keyed by image sha256 (or 'default'). Boxes are in the coordinate frame of the image passed to detect(). Add your own: run vi3ion analyze, then sha256 the PNG.",
+  "default": {
+    "objects": [],
+    "captions": [],
+    "scene_tags": []
+  }
+}

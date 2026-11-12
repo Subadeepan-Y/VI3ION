@@ -1,0 +1,24 @@
+{
+  "_meta": {
+    "image": "sample_ui.png",
+    "source": "hand-transcribed from the image (ground truth)",
+    "note": "Synthetic settings dialog: the easy end of the scale. Every string is bold enough to be legible on sight."
+  },
+  "text": [
+    {"value": "Settings", "region": "top_bar"},
+
+    {"value": "General", "region": "left_column"},
+    {"value": "Appearance", "region": "left_column"},
+    {"value": "Notifications", "region": "left_column"},
+    {"value": "Privacy", "region": "left_column"},
+
+    {"value": "Appearance", "region": "centre"},
+    {"value": "Choose how the application looks on this device.", "region": "centre"},
+    {"value": "Light", "region": "centre"},
+    {"value": "Dark", "region": "centre"},
+    {"value": "System", "region": "centre"},
+    {"value": "Save", "region": "centre"},
+    {"value": "Cancel", "region": "centre"},
+    {"value": "All changes saved", "region": "centre"}
+  ]
+}

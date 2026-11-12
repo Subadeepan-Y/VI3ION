@@ -1,0 +1,33 @@
+# Only the package, the docs and the license ship in the sdist.
+include LICENSE
+include README.md
+include LOCAL_MODELS.md
+include PERFORMANCE.md
+include pyproject.toml
+
+recursive-include vi3ion *.py
+recursive-include vi3ion/core/ocr/models *.onnx
+recursive-include vi3ion/skill *.md
+recursive-include adapters *.md
+
+# Everything below is local development material.
+prune dashboard
+prune .opencode
+prune data
+prune scripts
+prune skill
+prune testing screenshots
+prune tools
+prune tests
+prune .github
+exclude *.png
+exclude *.jpg
+exclude *.jpeg
+exclude .env
+exclude .env.example
+exclude CONTINUATION.md
+exclude IMAGE_ANALYSIS.md
+exclude IMAGE_ANALYSIS - new.md
+exclude VI3ION_OUTPUT.md
+global-exclude *.py[cod]
+global-exclude __pycache__

@@ -1,0 +1,70 @@
+{
+  "_meta": {
+    "image": "Screenshot 2026-10-31 212904.png",
+    "source": "hand-transcribed expected file (ground truth)",
+    "note": "Entries the transcription could not verify from OCR are marked uncertain."
+  },
+  "text": [
+    {"value": "SUBADEEPAN", "region": "top_bar"},
+    {"value": "HERO", "region": "top_bar"},
+    {"value": "ABOUT", "region": "top_bar"},
+    {"value": "WORK", "region": "top_bar"},
+    {"value": "PROCESS", "region": "top_bar"},
+    {"value": "CONTACT", "region": "top_bar"},
+    {"value": "KYOTO SANCTUARY // 2026", "region": "top_bar"},
+
+    {"value": "00", "region": "left_column"},
+    {"value": "PORTFOLIO", "region": "left_column"},
+    {"value": "2026", "region": "left_column"},
+    {"value": "BUILT TO", "region": "left_column"},
+    {"value": "SOLVE.", "region": "left_column"},
+    {"value": "SHIPPED TO", "region": "left_column"},
+    {"value": "WORK.", "region": "left_column"},
+    {"value": "AI tutors. Animation engines. Game compilers. Leveraging modern stacks to build what's missing.", "region": "left_column", "uncertain": true},
+    {"value": "SCROLL TO ENTER", "region": "left_column"},
+
+    {"value": "00 THE HIDDEN GATE", "region": "right_column"},
+    {"value": "01 THE MAKER", "region": "right_column"},
+    {"value": "02 GRADEIFY", "region": "right_column"},
+    {"value": "03 MANIM-TS", "region": "right_column"},
+    {"value": "04 DUEL DECK", "region": "right_column"},
+    {"value": "05 DESKTOP BUDDY", "region": "right_column"},
+    {"value": "06 GREATE ENGINE", "region": "right_column"},
+    {"value": "07 PERSONAL CLOUD", "region": "right_column"},
+    {"value": "08 THE RITUAL", "region": "right_column"},
+    {"value": "09 SANCTUM", "region": "right_column"},
+
+    {"value": "陽門", "region": "right_column", "uncertain": true},
+    {"value": "門跡", "region": "right_column", "uncertain": true},
+    {"value": "学宮", "region": "right_column", "uncertain": true},
+    {"value": "三重塔", "region": "right_column", "uncertain": true},
+    {"value": "両極殿", "region": "right_column", "uncertain": true},
+    {"value": "茶室", "region": "right_column", "uncertain": true},
+    {"value": "天守閣", "region": "right_column", "uncertain": true},
+    {"value": "宝蔵", "region": "right_column", "uncertain": true},
+    {"value": "作法", "region": "right_column", "uncertain": true},
+    {"value": "内殿", "region": "right_column", "uncertain": true},
+
+    {"value": "00", "region": "bottom_bar"},
+    {"value": "35°00'N 135°46'E // KYOTO VOID", "region": "bottom_bar"},
+    {"value": "[0-9] JUMP", "region": "bottom_bar"},
+    {"value": "[M] AUDIO", "region": "bottom_bar"},
+    {"value": "[SPACE] DOSSIER", "region": "bottom_bar"},
+    {"value": "[?] ALL", "region": "bottom_bar"},
+    {"value": "1611 ∞ 00 ∞ 2026", "region": "bottom_bar"},
+    {"value": "EST. 2026 // STILLNESS IN CRAFT", "region": "bottom_bar"}
+  ],
+  "objects": [
+    {"label": "torii gate", "bbox": [590, 12, 1332, 320]},
+    {"label": "stone pillar", "bbox": [507, 11, 584, 245]},
+    {"label": "stone pillar", "bbox": [503, 255, 585, 454]},
+    {"label": "red sun", "bbox": [1042, 199, 1179, 333]},
+    {"label": "pagoda", "bbox": [1035, 201, 1172, 339]},
+    {"label": "paper lantern", "bbox": [1731, 155, 1810, 234]},
+    {"label": "paper lantern", "bbox": [1691, 268, 1877, 330]},
+    {"label": "red walkway", "bbox": [584, 597, 1354, 949]},
+    {"label": "rocks", "bbox": [95, 620, 479, 839]},
+    {"label": "building", "bbox": [1421, 277, 1644, 539]}
+  ],
+  "scene": "illustrated 3D scene"
+}

@@ -1,0 +1,47 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environments
+.venv/
+venv/
+.env
+.env.local
+
+# Local data (never commit: it holds the user's images and database)
+data/
+*.db
+*.sqlite
+
+# Node
+node_modules/
+dashboard/dist/
+
+# Screenshots and scratch output
+*.png
+*.jpg
+*.jpeg
+!tests/fixtures/*.png
+*.webp
+*.gif
+*.bmp
+*.mp4
+*.mov
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Local agent notes (not part of the release)
+CONTINUATION.md
+VI3ION_OUTPUT.md

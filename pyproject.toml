@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vi3ion"
+version = "0.1.0"
+description = "Visual intelligence for AI agents: measured visual perception over MCP."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Subadeepan-Y" }]
+keywords = [
+    "mcp",
+    "vision",
+    "ocr",
+    "perception",
+    "screenshot",
+    "accessibility",
+    "llm",
+    "agents",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics :: Capture",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "mcp>=1.2",
+    "numpy>=1.26",
+    "opencv-python-headless>=4.9",
+    "pillow>=10.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+]
+
+[project.optional-dependencies]
+# OCR engine (RapidOCR + ONNX runtime). Without it Vi3ion still measures
+# geometry and colour, but reads no text.
+ocr = ["rapidocr-onnxruntime>=1.2"]
+# Optional local object detection / captioning (large download).
+semantic = ["torch>=2.2", "transformers>=4.44"]
+# Optional HTTP server + dashboard.
+dashboard = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "python-multipart>=0.0.9"]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+    "build>=1.2",
+    "twine>=5.1",
+]
+
+[project.scripts]
+vi3ion = "vi3ion.cli:main"
+vi3ion-mcp = "vi3ion.mcp_server:main"
+
+[project.urls]
+Homepage = "https://github.com/sub858/VI3ION"
+Repository = "https://github.com/sub858/VI3ION"
+Issues = "https://github.com/sub858/VI3ION/issues"
+Changelog = "https://github.com/sub858/VI3ION/releases"
+
+[tool.setuptools.packages.find]
+# vi3ion is the real package; agent_interface is a compat shim forwarding to
+# vi3ion.mcp_server so launchers built from older entry points keep working.
+include = ["vi3ion*", "agent_interface*"]
+
+[tool.setuptools.package-data]
+vi3ion = [
+    "core/ocr/models/*.onnx",
+    "skill/*.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
