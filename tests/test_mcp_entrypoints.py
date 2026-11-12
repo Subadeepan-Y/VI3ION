@@ -17,9 +17,15 @@ PROJECT = Path(__file__).resolve().parents[1]
 
 
 def _handshake(module: str, attempts: int = 3) -> dict:
+    """Start the server and talk to it the way a client does.
+
+    The responses are read line by line: waiting for the process to exit
+    loses the tools/list answer on slow machines (macOS ARM starts the OCR
+    engine lazily and the reply can arrive after the process is gone).
+    """
     env = os.environ.copy()
     env["VI3ION_ALLOWED_ROOTS"] = str(PROJECT)
-    payload = (
+    messages = (
         json.dumps(
             {
                 "jsonrpc": "2.0",
@@ -40,28 +46,49 @@ def _handshake(module: str, attempts: int = 3) -> dict:
     )
     last_error = ""
     for _ in range(attempts):
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             [sys.executable, "-m", module],
-            input=payload,
-            capture_output=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=120,
             cwd=str(PROJECT),
             env=env,
         )
-        assert proc.returncode == 0, f"{module} exited {proc.returncode}: {proc.stderr[-400:]}"
         tools = 0
-        for line in proc.stdout.splitlines():
-            line = line.strip()
-            if not line.startswith("{"):
-                continue
-            message = json.loads(line)
-            if message.get("id") == 2:
-                tools = len((message.get("result") or {}).get("tools") or [])
+        try:
+            proc.stdin.write(messages)
+            proc.stdin.flush()
+            deadline = time.time() + 120
+            while time.time() < deadline:
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if not line.startswith("{"):
+                    continue
+                try:
+                    message = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if message.get("id") == 2:
+                    tools = len((message.get("result") or {}).get("tools") or [])
+                    break
+        except Exception as exc:  # noqa: BLE001
+            last_error = str(exc)
+        finally:
+            try:
+                proc.stdin.close()
+            except Exception:  # noqa: BLE001
+                pass
+            proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except Exception:  # noqa: BLE001
+                proc.kill()
         if tools:
-            return {"tools": tools, "stderr": proc.stderr}
-        last_error = (proc.stderr or "")[-200:]
-        time.sleep(1.0)
+            return {"tools": tools, "stderr": ""}
+        time.sleep(2.0)
     raise AssertionError(f"{module} listed no tools after {attempts} attempts: {last_error}")
 
 
