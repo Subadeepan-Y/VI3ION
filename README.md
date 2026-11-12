@@ -1,6 +1,6 @@
 # VI3ION — Measured Visual Perception for AI Agents
 
-[![CI](https://github.com/SUBADEEPAN-Y/VI3ION/actions/workflows/ci.yml/badge.svg)](https://github.com/SUBADEEPAN-Y/VI3ION/actions/workflows/ci.yml)
+[![CI](https://github.com/Subadeepan-Y/VI3ION/actions/workflows/ci.yml/badge.svg)](https://github.com/Subadeepan-Y/VI3ION/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 VI3ION is a local perception engine for AI agents. It reads images, screenshots

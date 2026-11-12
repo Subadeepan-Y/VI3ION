@@ -30,12 +30,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SUBADEEPAN-Y/VI3ION.git",
+    "url": "git+https://github.com/Subadeepan-Y/VI3ION.git",
     "directory": "plugins/opencode"
   },
-  "homepage": "https://github.com/SUBADEEPAN-Y/VI3ION#readme",
+  "homepage": "https://github.com/Subadeepan-Y/VI3ION#readme",
   "bugs": {
-    "url": "https://github.com/SUBADEEPAN-Y/VI3ION/issues"
+    "url": "https://github.com/Subadeepan-Y/VI3ION/issues"
   },
   "engines": {
     "node": ">=20"

@@ -63,10 +63,10 @@ vi3ion = "vi3ion.cli:main"
 vi3ion-mcp = "vi3ion.mcp_server:main"
 
 [project.urls]
-Homepage = "https://github.com/SUBADEEPAN-Y/VI3ION"
-Repository = "https://github.com/SUBADEEPAN-Y/VI3ION"
-Issues = "https://github.com/SUBADEEPAN-Y/VI3ION/issues"
-Changelog = "https://github.com/SUBADEEPAN-Y/VI3ION/releases"
+Homepage = "https://github.com/Subadeepan-Y/VI3ION"
+Repository = "https://github.com/Subadeepan-Y/VI3ION"
+Issues = "https://github.com/Subadeepan-Y/VI3ION/issues"
+Changelog = "https://github.com/Subadeepan-Y/VI3ION/releases"
 
 [tool.setuptools.packages.find]
 # vi3ion is the real package; agent_interface is a compat shim forwarding to

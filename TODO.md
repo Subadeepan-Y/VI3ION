@@ -38,12 +38,12 @@ Last updated: 2026-11-12 (during release polish).
 - [x] Windows upgrade trap documented: `pip install -U vi3ion` fails while the
       editor holds `vi3ion-mcp.exe`; register the server as
       `python -m vi3ion.mcp_server` instead.
-- [ ] `gh repo create SUBADEEPAN-Y/VI3ION --public` and push
+- [ ] `gh repo create Subadeepan-Y/VI3ION --public` and push
 - [ ] CI (`.github/workflows/ci.yml`): py3.11/3.12 × ubuntu/macos/windows →
       pytest → `vi3ion score --all` floor ≥ 91.5% → doctor → `python -m build`
 - [ ] Release: `python -m build` → `twine check dist/*` → `gh release create
       v0.1.0 dist/*.whl dist/*.tar.gz` → clean-venv install proof:
-      `pip install https://github.com/SUBADEEPAN-Y/VI3ION/releases/download/v0.1.0/vi3ion-0.1.0-py3-none-any.whl`
+      `pip install https://github.com/Subadeepan-Y/VI3ION/releases/download/v0.1.0/vi3ion-0.1.0-py3-none-any.whl`
 - [ ] `plugins/opencode/` → npm package `@vi3ion/opencode` (verify with `npm pack`
       + install tarball in a scratch dir), or document the copy-into-plugins path
 - [ ] Skill: add `vi3ion/skill/SKILL.md` to `package-data` (done) and register it
