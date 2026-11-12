@@ -1,4 +1,4 @@
-# @vi3ion/opencode
+# @subadeepan_y/vi3ion-opencode
 
 The OpenCode plugin for [VI3ION](https://github.com/Subadeepan-Y/VI3ION) — a
 local perception engine that measures images (OCR, geometry, per-element colour,
@@ -7,7 +7,7 @@ version diffs) and hands the results to your agent.
 ## Install
 
 ```bash
-npm i -D @vi3ion/opencode
+npm i -D @subadeepan_y/vi3ion-opencode
 ```
 
 The plugin needs the VI3ION engine (Python 3.11+):
@@ -27,7 +27,7 @@ Then register the MCP server in `~/.config/opencode/opencode.jsonc`:
       "environment": { "VI3ION_ALLOWED_ROOTS": "C:/path/to/your/project" }
     }
   },
-  "plugin": ["@vi3ion/opencode"]
+  "plugin": ["@subadeepan_y/vi3ion-opencode"]
 }
 ```
 

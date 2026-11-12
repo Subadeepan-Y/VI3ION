@@ -2,7 +2,7 @@
 
 | Harness | Guide |
 |---|---|
-| **OpenCode** | [opencode/README.md](opencode/README.md) — plus the optional `@vi3ion/opencode` plugin |
+| **OpenCode** | [opencode/README.md](opencode/README.md) — plus the optional `@subadeepan_y/vi3ion-opencode` plugin |
 | **Claude Code** | [claude-code.md](claude-code.md) |
 | **Cursor, Windsurf, Continue, Zed, Antigravity, Quoder** | [editors.md](editors.md) |
 | **Anything else that speaks MCP** | [generic-mcp.md](generic-mcp.md) |

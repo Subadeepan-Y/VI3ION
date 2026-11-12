@@ -33,7 +33,7 @@ Last updated: 2026-11-12 (after the 0.1.0 release).
       windows py3.12, macos py3.13, the clean-install check (wheel → empty venv →
       MCP handshake), the plugin smoke suite, the 91.5% fidelity floor
 - [x] Release `v0.1.0` published with the wheel + sdist attached
-- [x] `plugins/opencode/` packaged as `@vi3ion/opencode` (packed, installed into
+- [x] `plugins/opencode/` packaged as `@subadeepan_y/vi3ion-opencode` (packed, installed into
       a scratch project, smoke suite green against the *installed* package)
 - [x] Skill: `vi3ion/skill/SKILL.md` ships in the wheel and the npm tarball, and
       the plugin registers it with the editor (auto-invoke)
@@ -43,7 +43,7 @@ Last updated: 2026-11-12 (after the 0.1.0 release).
 
 ## Still to do
 
-- [ ] npm publish of `@vi3ion/opencode` (the publish workflow is ready, uses the
+- [ ] npm publish of `@subadeepan_y/vi3ion-opencode` (the publish workflow is ready, uses the
       `NPM_TOKEN` secret, and signs with provenance; waiting on an automation
       token so CI can publish unattended)
 - [ ] PyPI (`pip install vi3ion`) — rehearse on TestPyPI first; prefer trusted

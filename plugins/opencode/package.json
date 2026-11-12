@@ -1,5 +1,5 @@
 {
-  "name": "@vi3ion/opencode",
+  "name": "@subadeepan_y/vi3ion-opencode",
   "version": "0.1.0",
   "description": "Measured visual perception for OpenCode agents: OCR, geometry, per-element colour and version diffing, injected automatically.",
   "license": "Apache-2.0",

@@ -39,5 +39,6 @@ jobs:
       - name: Verify
         if: ${{ github.event_name == 'release' || inputs.dry_run == false }}
         run: |
-          npm view @vi3ion/opencode version dist-tags --json
-          echo "published: $(npm view @vi3ion/opencode version)"
+          PKG=$(npm pkg get name | tr -d '"')
+          echo "published: $(npm view "$PKG" version)"
+          npm view "$PKG" dist-tags --json
