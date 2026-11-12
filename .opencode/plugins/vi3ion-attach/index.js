@@ -121,7 +121,12 @@ function mcpDataDirFromConfig() {
       if (!fs.existsSync(file)) continue;
       const parsed = parseJsonc(fs.readFileSync(file, "utf8"));
       const servers = (parsed && (parsed.mcp?.servers || parsed.mcp)) || {};
-      const entry = servers.vi3ion;
+      // The key may be "vi3ion" or "VI3ION" — the display name is the user's
+      // choice, so match either.
+      const key = Object.keys(servers || {}).find(
+        (name) => name.trim().toLowerCase() === "vi3ion",
+      );
+      const entry = key ? servers[key] : null;
       const env = entry && (entry.environment || entry.env) ? (entry.environment || entry.env) : null;
       const value = env && (env.VI3ION_DATA_DIR || env.vi3ion_data_dir);
       if (value && String(value).trim() && !String(value).includes("~")) {
@@ -661,13 +666,13 @@ function missingMcpNotice(status = "not registered") {
 // `event.tools` can still list tools from a server that has since died, so
 // the authoritative signal is the server status.
 async function vi3ionMcpStatus(ctx) {
-  const unknown = { found: false, status: "unknown", raw: "" };
+  const unknown = { found: false, status: "unknown", raw: "", name: "" };
   try {
     if (!ctx.mcp || typeof ctx.mcp.list !== "function") return unknown;
     const listed = await ctx.mcp.list();
     const servers = (listed && listed.data) || listed || [];
     for (const server of servers) {
-      if (!server || server.name !== "vi3ion") continue;
+      if (!server || !isVi3ionServerName(server.name)) continue;
       const raw = server.status;
       let status = "unknown";
       if (typeof raw === "string") {
@@ -675,12 +680,18 @@ async function vi3ionMcpStatus(ctx) {
       } else if (raw && typeof raw === "object") {
         status = String(raw.state || raw.status || raw._tag || "unknown");
       }
-      return { found: true, status, raw: safeText(raw) };
+      return { found: true, status, raw: safeText(raw), name: server.name };
     }
-    return { found: false, status: "missing", raw: "" };
+    return { found: false, status: "missing", raw: "", name: "" };
   } catch (err) {
-    return { found: false, status: "unknown", raw: safeText(String(err)) };
+    return { found: false, status: "unknown", raw: safeText(String(err)), name: "" };
   }
+}
+
+// The MCP server may be registered as "vi3ion" or "VI3ION" (the key is the
+// user's choice; only the display differs). Match either.
+function isVi3ionServerName(name) {
+  return typeof name === "string" && name.trim().toLowerCase() === "vi3ion";
 }
 
 // JSON that can never throw and never returns undefined.
@@ -697,17 +708,23 @@ function safeText(value) {
 //   1. reload the MCP config
 //   2. re-set the server entry: OpenCode restarts a server when its
 //      configuration changes, but not when the config is merely reloaded
-async function respawnMcpServer(ctx) {
+async function respawnMcpServer(ctx, serverName) {
   if (!ctx.mcp || typeof ctx.mcp.reload !== "function") return false;
   await ctx.mcp.reload();
   try {
     if (ctx.mcp.transform && typeof ctx.mcp.transform === "function") {
       await ctx.mcp.transform((editor) => {
-        const config = editor.get("vi3ion");
+        const name =
+          serverName ||
+          Object.keys(editor.list() || {}).find((key) =>
+            isVi3ionServerName(key),
+          );
+        if (!name) return;
+        const config = editor.get(name);
         if (!config) return;
         // A real change is what makes OpenCode restart a server; re-setting an
         // identical config is a no-op.
-        editor.update("vi3ion", (current) => {
+        editor.update(name, (current) => {
           if (current && typeof current === "object") {
             current.disabled = false;
           }
@@ -735,7 +752,7 @@ async function reloadMcpIfStale(ctx) {
   }
   try {
     if (ctx.mcp && typeof ctx.mcp.reload === "function") {
-      await respawnMcpServer(ctx);
+      await respawnMcpServer(ctx, status.name);
       console.error("[vi3ion-attach] Vi3ion MCP tools missing: asked OpenCode to restart the MCP servers");
       return true;
     }
@@ -1444,7 +1461,7 @@ export default Plugin.define({
         const last = Number(await ctx.storage.get(MCP_RELOAD_KEY)) || 0;
         if (Date.now() - last > 15000) {
           await ctx.storage.set(MCP_RELOAD_KEY, Date.now());
-          await respawnMcpServer(ctx);
+          await respawnMcpServer(ctx, status.name);
           heal += " -> respawn requested";
         } else {
           heal += " -> respawn skipped (cooldown)";

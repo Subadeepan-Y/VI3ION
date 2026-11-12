@@ -105,7 +105,7 @@ Add the stdio MCP server to your agent's config:
 ```json
 {
   "mcpServers": {
-    "vi3ion": {
+    "VI3ION": {
       "command": "vi3ion-mcp",
       "args": [],
       "env": { "VI3ION_DATA_DIR": "~/.vi3ion" }
@@ -120,7 +120,7 @@ generated launcher:
 ```json
 {
   "mcpServers": {
-    "vi3ion": {
+    "VI3ION": {
       "command": "C:\\path\\to\\python.exe",
       "args": ["-m", "vi3ion.mcp_server"],
       "env": { "VI3ION_DATA_DIR": "~/.vi3ion" }

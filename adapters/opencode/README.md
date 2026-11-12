@@ -32,7 +32,7 @@ OpenCode config lives at `~/.config/opencode/` (Windows:
 ```json
 {
   "mcp": {
-    "vi3ion": {
+    "VI3ION": {
       "type": "local",
       "command": [
         "C:\\path\\to\\python.exe",
@@ -50,6 +50,9 @@ OpenCode config lives at `~/.config/opencode/` (Windows:
 
 Notes:
 
+- The key is the **display name** of the server, and it becomes the tool
+  namespace: `"VI3ION"` gives you `VI3ION.inspect_image`, `"vi3ion"` gives
+  `vi3ion.inspect_image`. Vi3ion accepts either spelling.
 - The key is **`environment`**, not `env`. OpenCode ignores `env`, so those
   variables would be dropped silently — `vi3ion doctor` reports this as
   `mcp_env_key`.

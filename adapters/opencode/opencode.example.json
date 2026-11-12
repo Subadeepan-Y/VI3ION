@@ -1,7 +1,7 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "vi3ion": {
+    "VI3ION": {
       "type": "local",
       "command": [
         "C:\\path\\to\\python.exe",

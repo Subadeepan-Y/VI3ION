@@ -572,18 +572,27 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             continue
         raw = config_path.read_text(encoding="utf-8", errors="replace")
         plugin_found = plugin_found or "vi3ion-attach" in raw
-        mcp_found = mcp_found or "vi3ion-mcp" in raw or '"vi3ion"' in raw
-        # OpenCode's MCP config uses "environment"; the generic MCP client
-        # format uses "env". Using the wrong one silently drops the variables.
-        if "vi3ion" in raw:
-            try:
-                parsed = json.loads(_strip_jsonc(raw))
-                servers = (parsed.get("mcp") or {}).get("servers") or (parsed.get("mcp") or {})
-                entry = servers.get("vi3ion") if isinstance(servers, dict) else None
-                if isinstance(entry, dict) and ("env" in entry or "environment" in entry):
-                    mcp_env_key_ok = "environment" in entry
-            except Exception:  # noqa: BLE001
-                pass
+        if "vi3ion" not in raw.lower():
+            continue
+        try:
+            parsed = json.loads(_strip_jsonc(raw))
+            servers = (parsed.get("mcp") or {}).get("servers") or (parsed.get("mcp") or {})
+            if not isinstance(servers, dict):
+                continue
+            # The key may be "vi3ion" or "VI3ION" (display name is the user's
+            # choice); the tool namespace follows it exactly.
+            key = next(
+                (name for name in servers if name.strip().lower() == "vi3ion"),
+                None,
+            )
+            if key is None:
+                continue
+            mcp_found = True
+            entry = servers.get(key)
+            if isinstance(entry, dict) and ("env" in entry or "environment" in entry):
+                mcp_env_key_ok = "environment" in entry
+        except Exception:  # noqa: BLE001
+            pass
     checks.append(
         {
             "check": "editor_wiring",
