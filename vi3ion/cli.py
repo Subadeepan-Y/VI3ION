@@ -493,6 +493,30 @@ def _strip_jsonc(raw: str) -> str:
     return re.sub(r",(\s*[}\]])", r"\1", without_line)
 
 
+def cmd_skill(args: argparse.Namespace) -> int:
+    """Print the agent skill text (for AGENTS.md / CLAUDE.md / .claude/skills)."""
+    from pathlib import Path
+
+    import vi3ion
+
+    skill_path = Path(vi3ion.__file__).resolve().parent / "skill" / "SKILL.md"
+    if not skill_path.exists():
+        print(
+            f"error: the skill file is missing from this installation ({skill_path})",
+            file=sys.stderr,
+        )
+        return 1
+    text = skill_path.read_text(encoding="utf-8")
+    if getattr(args, "out", None):
+        target = Path(args.out).expanduser()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+        print(f"skill written to {target}")
+        return 0
+    print(text)
+    return 0
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     """One-shot setup check: OCR, resources, registry, local runtimes, editor wiring."""
     settings = get_settings()
@@ -961,6 +985,13 @@ def build_parser() -> argparse.ArgumentParser:
     local.add_argument("--timeout", type=float, default=1.5, help="probe timeout in seconds")
     local.add_argument("--json", action="store_true", help="emit JSON")
     local.set_defaults(func=cmd_local)
+
+    skill = sub.add_parser(
+        "skill",
+        help="print the agent skill text (paste into AGENTS.md / CLAUDE.md / .claude/skills/)",
+    )
+    skill.add_argument("--out", default=None, help="write the skill to this file instead")
+    skill.set_defaults(func=cmd_skill)
 
     doctor = sub.add_parser(
         "doctor",
