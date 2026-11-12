@@ -18,13 +18,34 @@ import time
 from pathlib import Path
 from typing import Any
 
-import httpx
-
 OLLAMA_BASE = os.environ.get("VI3ION_OLLAMA_BASE", "http://127.0.0.1:11434")
 MODEL = os.environ.get("VI3ION_VLM_MODEL", "moondream")
 TIMEOUT_S = float(os.environ.get("VI3ION_CAPTION_TIMEOUT_S", "60"))
-CACHE_PATH = Path("data") / "caption_cache.json"
 MAX_WORDS = 150
+
+
+def _httpx():
+    """Import httpx lazily: only the optional captioning path needs it."""
+    try:
+        import httpx
+    except ImportError as exc:  # pragma: no cover - depends on the environment
+        raise ImportError(
+            "captioning needs httpx: pip install 'vi3ion[semantic]'"
+        ) from exc
+    return httpx
+
+
+def _cache_path() -> Path:
+    """The caption cache lives in the Vi3ion data dir (never in the cwd)."""
+    try:
+        from .config import get_settings
+
+        return get_settings().data_dir / "caption_cache.json"
+    except Exception:  # noqa: BLE001
+        return Path.home() / ".vi3ion" / "caption_cache.json"
+
+
+CACHE_PATH = _cache_path()
 
 PROMPT = (
     "Describe this screenshot for a developer who cannot see it. In 3 to 6 "
@@ -49,6 +70,7 @@ def _save_cache(cache: dict[str, str]) -> None:
 
 def ollama_available(timeout: float = 2.0) -> bool:
     try:
+        httpx = _httpx()
         with httpx.Client(timeout=timeout) as client:
             response = client.get(f"{OLLAMA_BASE}/api/tags")
         return response.status_code == 200
@@ -106,6 +128,7 @@ def caption(
         "options": {"num_predict": 200},
     }
     try:
+        httpx = _httpx()
         with httpx.Client(timeout=TIMEOUT_S) as client:
             response = client.post(f"{OLLAMA_BASE}/api/generate", json=payload)
             response.raise_for_status()

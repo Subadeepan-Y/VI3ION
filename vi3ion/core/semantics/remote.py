@@ -13,12 +13,22 @@ import re
 import time
 
 import cv2
-import httpx
 import numpy as np
 
 from ...config import Settings
 from ...schemas import BBox
 from .interface import SemanticCaption, SemanticObject, SemanticResult
+
+
+def _httpx():
+    """Import httpx lazily: it is only needed for the opt-in remote provider."""
+    try:
+        import httpx
+    except ImportError as exc:  # pragma: no cover - depends on the environment
+        raise ImportError(
+            "the remote semantic provider needs httpx: pip install 'vi3ion[semantic]'"
+        ) from exc
+    return httpx
 
 PROMPT = """You are a visual perception component inside a reverse-engineering tool.
 Describe only what is visibly present. Do not guess hidden behaviour.
@@ -89,6 +99,7 @@ class RemoteSemanticProvider:
         url = self.settings.semantic_base_url.rstrip("/") + "/chat/completions"
         headers = {"Authorization": f"Bearer {self.settings.semantic_api_key}"}
         try:
+            httpx = _httpx()
             with httpx.Client(timeout=self.settings.semantic_timeout_s) as client:
                 response = client.post(url, json=payload, headers=headers)
                 response.raise_for_status()

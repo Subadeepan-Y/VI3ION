@@ -649,12 +649,72 @@ function presenceInstruction(vision, local) {
     .join(" ");
 }
 
-function missingMcpNotice() {
+function missingMcpNotice(status = "not registered") {
   return [
-    "Vi3ion notice: the Vi3ion MCP server is not registered or reachable in this session.",
-    "Interactive inspection tools (inspect_image, inspect_region, verify_claim, cross_check_text, remember_image, diff_images) are unavailable.",
-    "Ensure vi3ion MCP is running and registered in OpenCode config.",
+    `Vi3ion notice: the Vi3ion MCP server is ${status} in this session.`,
+    "Interactive inspection tools (inspect_image, inspect_region, verify_claim, cross_check_text, remember_image, diff_images) are unavailable, so image questions cannot be answered with measurements.",
+    "The plugin is retrying the connection; if it does not come back, restart the editor (MCP servers are spawned at startup) and check the MCP entry.",
   ].join(" ");
+}
+
+// Live status of the Vi3ion MCP server, as OpenCode sees it.
+// `event.tools` can still list tools from a server that has since died, so
+// the authoritative signal is the server status.
+async function vi3ionMcpStatus(ctx) {
+  const unknown = { found: false, status: "unknown", raw: "" };
+  try {
+    if (!ctx.mcp || typeof ctx.mcp.list !== "function") return unknown;
+    const listed = await ctx.mcp.list();
+    const servers = (listed && listed.data) || listed || [];
+    for (const server of servers) {
+      if (!server || server.name !== "vi3ion") continue;
+      const raw = server.status;
+      let status = "unknown";
+      if (typeof raw === "string") {
+        status = raw;
+      } else if (raw && typeof raw === "object") {
+        status = String(raw.state || raw.status || raw._tag || "unknown");
+      }
+      return { found: true, status, raw: safeText(raw) };
+    }
+    return { found: false, status: "missing", raw: "" };
+  } catch (err) {
+    return { found: false, status: "unknown", raw: safeText(String(err)) };
+  }
+}
+
+// JSON that can never throw and never returns undefined.
+function safeText(value) {
+  try {
+    const text = JSON.stringify(value);
+    return typeof text === "string" ? text : String(text);
+  } catch {
+    return "";
+  }
+}
+
+// Bring a dead Vi3ion MCP server back without an editor restart.
+// MCP servers are spawned when the editor starts; if one dies (an upgrade
+// replaced it, it was killed), OpenCode does not retry on its own.
+async function reloadMcpIfStale(ctx) {
+  const now = Date.now();
+  const last = Number(await ctx.storage.get(MCP_RELOAD_KEY)) || 0;
+  if (now - last < 60000) return false;
+  try {
+    await ctx.storage.set(MCP_RELOAD_KEY, now);
+  } catch {
+    // storage may be unavailable
+  }
+  try {
+    if (ctx.mcp && typeof ctx.mcp.reload === "function") {
+      await ctx.mcp.reload();
+      console.error("[vi3ion-attach] Vi3ion MCP tools missing: asked OpenCode to reload the MCP servers");
+      return true;
+    }
+  } catch (error) {
+    console.error(`[vi3ion-attach] MCP reload failed: ${error && error.message}`);
+  }
+  return false;
 }
 
 function fileUriToPath(uri) {
@@ -1110,6 +1170,7 @@ const GREETED_MODEL_KEY = "vi3ion-greeted-model";
 const REQUEST_MODEL_KEY = "vi3ion-request-model";
 const BUDGET_KEY = "vi3ion-budget";
 const EV_STATE_KEY = "vi3ion-ev-state";
+const MCP_RELOAD_KEY = "vi3ion-mcp-reload-at";
 const SEEN_KEY = "vi3ion-seen-by-session";
 
 // Images already analysed in this session. Scoped per session so a new
@@ -1234,11 +1295,109 @@ async function evidenceBudget(ctx, model, tier) {
   return 700;
 }
 
+// Body of the context/compaction hooks. Kept separate so the caller can
+// contain every failure: a plugin bug must never break the session.
+async function handleRequestHook(ctx, event, hookName, options, mode) {
+  if (!(await isEnabled(ctx))) return;
+  if (mode === "never") return;
+  const model = await resolveModel(ctx, event);
+  const vision = options.confirmOnly === true || isVisionCapable(model);
+  const local = isLocalModel(model);
+  if (!Array.isArray(event.system)) return;
+
+  const presence = presenceInstruction(vision, local);
+  event.system.push({ type: "text", text: presence });
+
+  // Are the Vi3ion MCP tools actually usable? The live server status is
+  // authoritative: the tool list can still show tools from a server that has
+  // since died.
+  const tools = event.tools || {};
+  const toolNames = Object.keys(tools);
+  const toolsListed = toolNames.some((name) => /vi3ion/i.test(name) && /inspect/i.test(name));
+  const status = await vi3ionMcpStatus(ctx);
+  const mcpBroken =
+    (status.found && status.status !== "connected" && status.status !== "pending") ||
+    (!status.found && !toolsListed);
+  if (mcpBroken) {
+    event.system.push({
+      type: "text",
+      text: missingMcpNotice(status.found ? status.status : "not registered"),
+    });
+    await reloadMcpIfStale(ctx);
+  }
+
+  // A model switch inside the session: tell the new model who Vi3ion is,
+  // otherwise it works without knowing the layer exists.
+  const key = modelKey(model);
+  const previous = await requestModel(ctx, event.sessionID);
+  if (previous && previous !== key) {
+    const notice = roleChangeNotice(key, previous, vision);
+    event.system.push({ type: "text", text: notice });
+    await recordInjection({
+      session_id: event.sessionID,
+      model: key,
+      role: vision ? "assistant" : "eyes",
+      reason: "model switch",
+      blocks: [{ key: "vi3ion-role-change", chars: notice.length, text: notice }],
+    });
+  }
+  await setRequestModel(ctx, event.sessionID, key);
+
+  // Image analysis. The attachment (mime + bytes) only exists on the message,
+  // so this is where images are found and measured.
+  if (hookName === "context" && (await shouldApply(ctx, mode))) {
+    const result = await analyseMessageImages(ctx, event, model, vision, options);
+    if (result && result.blocks.length) {
+      for (const block of result.blocks) {
+        event.system.push({ type: "text", text: block });
+      }
+      // Keep the evidence in a session instruction too, so it survives
+      // follow-up turns and compaction.
+      await viewInstruction(ctx, event.sessionID, "vi3ion-evidence", result.blocks.join("\n\n"));
+      await recordInjection({
+        session_id: event.sessionID,
+        model: key,
+        role: vision ? "assistant" : "eyes",
+        reason: "image analysed",
+        blocks: result.blocks.map((block) => ({
+          key: "vi3ion-evidence",
+          chars: block.length,
+          text: block,
+        })),
+      });
+    } else {
+      // No new image: re-attach the evidence of the last image so the model
+      // can still reason about it.
+      const state = (await ctx.storage.get(EV_STATE_KEY)) || {};
+      const stored = state[event.sessionID];
+      if (stored && Array.isArray(stored.blocks) && stored.blocks.length) {
+        for (const block of stored.blocks) {
+          event.system.push({ type: "text", text: block });
+        }
+      }
+    }
+  }
+}
+
 export default Plugin.define({
   id: "vi3ion-attach",
   async setup(ctx) {
     const options = ctx.options || {};
     const mode = options.mode || "auto";
+
+    // A heartbeat in the trace file: proves the plugin is loaded and where it
+    // writes. Useful when the session behaves strangely.
+    await recordInjection({
+      session_id: "plugin",
+      reason: "plugin loaded",
+      blocks: [
+        {
+          key: "vi3ion-plugin",
+          chars: 0,
+          text: `data dir: ${dataDir()} · mode: ${mode} · python: ${pythonPath() || "not found"}`,
+        },
+      ],
+    }).catch(() => {});
 
     // Persistent presence: appended to the system instructions of every model
     // request, and to compaction requests, so summarisation cannot silently
@@ -1247,76 +1406,29 @@ export default Plugin.define({
     // and each request is handled for the model that will answer it.
     for (const hookName of ["context", "compaction"]) {
       await ctx.session.hook(hookName, async (event) => {
-        if (!(await isEnabled(ctx))) return;
-        if (mode === "never") return;
-        const model = await resolveModel(ctx, event);
-        const vision = options.confirmOnly === true || isVisionCapable(model);
-        const local = isLocalModel(model);
-        if (!Array.isArray(event.system)) return;
-
-        const presence = presenceInstruction(vision, local);
-        event.system.push({ type: "text", text: presence });
-
-        // Are the Vi3ion MCP tools actually registered in this session? If
-        // not, the agent cannot zoom in, cross-check or diff on demand, so
-        // tell it (and the user) exactly what is missing.
-        const tools = event.tools || {};
-        const toolNames = Object.keys(tools);
-        const mcpReady = toolNames.some((name) => /vi3ion/i.test(name) && /inspect/i.test(name));
-        if (!mcpReady) {
-          event.system.push({ type: "text", text: missingMcpNotice() });
-        }
-
-        // A model switch inside the session: tell the new model who Vi3ion
-        // is, otherwise it works without knowing the layer exists.
-        const key = modelKey(model);
-        const previous = await requestModel(ctx, event.sessionID);
-        if (previous && previous !== key) {
-          const notice = roleChangeNotice(key, previous, vision);
-          event.system.push({ type: "text", text: notice });
+        // A plugin bug must never break the user's session: every failure
+        // inside a hook is contained here.
+        try {
+          await handleRequestHook(ctx, event, hookName, options, mode);
+        } catch (error) {
+          // Record the failure where the user can see it (the trace file),
+          // and never let it escape into the session.
           await recordInjection({
             session_id: event.sessionID,
-            model: key,
-            role: vision ? "assistant" : "eyes",
-            reason: "model switch",
-            blocks: [{ key: "vi3ion-role-change", chars: notice.length, text: notice }],
-          });
-        }
-        await setRequestModel(ctx, event.sessionID, key);
-
-        // Image analysis. The attachment (mime + bytes) only exists on the
-        // message, so this is where images are found and measured.
-        if (hookName === "context" && (await shouldApply(ctx, mode))) {
-          const result = await analyseMessageImages(ctx, event, model, vision, options);
-          if (result && result.blocks.length) {
-            for (const block of result.blocks) {
-              event.system.push({ type: "text", text: block });
-            }
-            // Keep the evidence in a session instruction too, so it survives
-            // follow-up turns and compaction.
-            await viewInstruction(ctx, event.sessionID, "vi3ion-evidence", result.blocks.join("\n\n"));
-            await recordInjection({
-              session_id: event.sessionID,
-              model: key,
-              role: vision ? "assistant" : "eyes",
-              reason: "image analysed",
-              blocks: result.blocks.map((block) => ({
-                key: "vi3ion-evidence",
-                chars: block.length,
-                text: block,
-              })),
-            });
-          } else {
-            // No new image: re-attach the evidence of the last image so the
-            // model can still reason about it.
-            const state = (await ctx.storage.get(EV_STATE_KEY)) || {};
-            const stored = state[event.sessionID];
-            if (stored && Array.isArray(stored.blocks) && stored.blocks.length) {
-              for (const block of stored.blocks) {
-                event.system.push({ type: "text", text: block });
-              }
-            }
-          }
+            reason: `${hookName} hook error`,
+            blocks: [
+              {
+                key: "vi3ion-error",
+                chars: 0,
+                text: `${error && error.stack ? error.stack : String(error)}`,
+              },
+            ],
+          }).catch(() => {});
+          console.error(
+            `[vi3ion-attach] ${hookName} hook failed (ignored): ${
+              error && error.stack ? error.stack : error
+            }`,
+          );
         }
       });
     }
@@ -1525,6 +1637,30 @@ export default Plugin.define({
     });
 
     await ctx.session.hook("prompt", async (event) => {
+      // A plugin bug must never break the user's session.
+      try {
+        await handlePromptHook(ctx, event, options, mode);
+      } catch (error) {
+        await recordInjection({
+          session_id: event.sessionID,
+          reason: "prompt hook error",
+          blocks: [
+            {
+              key: "vi3ion-error",
+              chars: 0,
+              text: `${error && error.stack ? error.stack : String(error)}`,
+            },
+          ],
+        }).catch(() => {});
+        console.error(
+          `[vi3ion-attach] prompt hook failed (ignored): ${
+            error && error.stack ? error.stack : error
+          }`,
+        );
+      }
+    });
+
+    async function handlePromptHook(ctx, event, options, mode) {
       if (!(await isEnabled(ctx))) return;
       if (mode === "never") return;
 
@@ -1568,6 +1704,6 @@ export default Plugin.define({
           blocks: [{ key: "vi3ion-intro", chars: intro.length, text: intro }],
         });
       }
-    });
+    }
   },
 });

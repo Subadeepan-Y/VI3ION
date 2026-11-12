@@ -10,8 +10,16 @@
 //   - the injection trace file
 import fs from "node:fs";
 import assert from "node:assert";
+import os from "node:os";
+import path from "node:path";
 
-import plugin from "./index.js";
+// The smoke test must not touch the user's real data dir (it writes the
+// injection trace). Use a throwaway directory. ESM hoists imports, so the
+// plugin is loaded dynamically after the variable is set.
+const SMOKE_DATA = fs.mkdtempSync(path.join(os.tmpdir(), "vi3ion-smoke-"));
+process.env.VI3ION_DATA_DIR = SMOKE_DATA;
+
+const { default: plugin } = await import("./index.js");
 
 const IMG = "D:\\PROJECTS\\VI3ION\\tests\\fixtures\\sample_ui.png";
 const IMG_URI = "file:///D:/PROJECTS/VI3ION/tests/fixtures/sample_ui.png";
@@ -390,4 +398,53 @@ assert.ok(onRequest.includes("vi3ion-auto"), "re-enabled: evidence block missing
   );
 }
 
-console.log("SMOKE OK (intro / presence / compaction / message-images / clipboard / retention / cache / trace / visionless / vision / off / on / diff / model-switch / local)");
+// --- 15. a dead MCP server is detected and reloaded ---
+{
+  let reloaded = 0;
+  const reloadCtx = makeCtx({ providerID: "inception", id: "mercury-3" });
+  reloadCtx.mcp = {
+    async reload() { reloaded += 1; },
+    async list() { return { data: [{ name: "vi3ion", status: "failed" }] }; },
+  };
+  await plugin.setup(reloadCtx);
+  // The server is failed -> the plugin notices and asks OpenCode to reload
+  // the MCP servers (at most once a minute).
+  const request = await runContext(reloadCtx, { messages: [], sessionID: "ses_reload" });
+  assert.ok(request.includes("failed"), "reload: status not reported");
+  assert.ok(request.includes("not registered or reachable") === false, "reload: wrong notice text");
+  assert.strictEqual(reloaded, 1, "reload: MCP reload was not requested");
+  // A second request inside the cooldown must not reload again.
+  await runContext(reloadCtx, { messages: [], sessionID: "ses_reload" });
+  assert.strictEqual(reloaded, 1, "reload: MCP reload repeated inside the cooldown");
+}
+
+// --- 16. a connected MCP server triggers no reload ---
+{
+  let reloaded = 0;
+  const okCtx = makeCtx({ providerID: "inception", id: "mercury-3" });
+  okCtx.mcp = {
+    async reload() { reloaded += 1; },
+    async list() { return { data: [{ name: "vi3ion", status: "connected" }] }; },
+  };
+  await plugin.setup(okCtx);
+  const request = await runContext(okCtx, { messages: [], sessionID: "ses_ok" });
+  assert.ok(!request.includes("Vi3ion notice"), "connected: spurious notice");
+  assert.strictEqual(reloaded, 0, "connected: unexpected MCP reload");
+}
+
+// --- 17. a plugin bug inside a hook must never break the session ---
+{
+  const brokenCtx = makeCtx({ providerID: "inception", id: "mercury-3" });
+  await plugin.setup(brokenCtx);
+  // Make the model resolution explode: the hook must swallow it.
+  brokenCtx.model.default = async () => {
+    throw new Error("boom");
+  };
+  const request = await runContext(brokenCtx, { messages: [], sessionID: "ses_broken" });
+  assert.ok(typeof request === "string", "broken: hook did not return");
+  // The prompt hook must survive the same failure.
+  const prompt = await runHook(brokenCtx);
+  assert.strictEqual(prompt, "look at this", "broken: prompt hook changed the user text");
+}
+
+console.log("SMOKE OK (intro / presence / compaction / message-images / clipboard / retention / cache / trace / visionless / vision / off / on / diff / model-switch / local / mcp-reload / fault-isolation)");

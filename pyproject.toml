@@ -41,14 +41,14 @@ dependencies = [
     "pillow>=10.0",
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
+    # OCR engine + ONNX runtime (~60 MB installed): Vi3ion's core value is
+    # reading text, so it must work on a plain `pip install vi3ion`.
+    "rapidocr-onnxruntime>=1.2",
 ]
 
 [project.optional-dependencies]
-# OCR engine (RapidOCR + ONNX runtime). Without it Vi3ion still measures
-# geometry and colour, but reads no text.
-ocr = ["rapidocr-onnxruntime>=1.2"]
 # Optional local object detection / captioning (large download).
-semantic = ["torch>=2.2", "transformers>=4.44"]
+semantic = ["torch>=2.2", "transformers>=4.44", "httpx>=0.27"]
 # Optional HTTP server + dashboard.
 dashboard = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "python-multipart>=0.0.9"]
 dev = [

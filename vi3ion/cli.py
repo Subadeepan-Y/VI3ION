@@ -666,7 +666,11 @@ def _doctor_actions(checks: list[dict[str, Any]], local: dict[str, Any]) -> list
     actions: list[str] = []
     by_name = {c["check"]: c for c in checks}
     if not by_name.get("ocr", {}).get("ok"):
-        actions.append("OCR is not ready: check the OCR model files under data/ or reinstall dependencies.")
+        actions.append(
+            "OCR is not ready: install it with 'pip install rapidocr-onnxruntime' "
+            "(or reinstall vi3ion) - without it Vi3ion measures colour and geometry "
+            "but reads no text."
+        )
     if not by_name.get("editor_wiring", {}).get("ok"):
         actions.append(
             "Editor wiring incomplete: register the plugin and the vi3ion MCP server "

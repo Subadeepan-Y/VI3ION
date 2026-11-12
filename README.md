@@ -63,32 +63,38 @@ product:
 | Layer | What it is |
 |---|---|
 | **Core** | Agent-independent perception pipeline (Python). Pure computation: ingestion → pixels → geometry → OCR → spatial relations → verification → text brief. |
-| **Adapter** | MCP server (stdio) exposing 5 tools. This is what the coding agent talks to. |
-| **Skill** | Written instructions (`skill/SKILL.md`) telling the agent *when and how* to call the tools. |
+| **Adapter** | MCP server (stdio) exposing 11 tools. This is what the coding agent talks to. |
+| **Skill** | Written instructions (`vi3ion/skill/SKILL.md`) telling the agent *when and how* to call the tools. |
 | **Dashboard** | Local React dev dashboard (`dashboard/`) for testing and inspecting evidence. Never required in production. |
 
 ## Quickstart
 
 ```bash
-# 1. install
+# 1. install (OCR included; ~200 MB of dependencies)
+pip install vi3ion
+
+# ...or from a checkout
 python -m venv .venv
 .venv\Scripts\activate            # Windows  |  source .venv/bin/activate  # POSIX
-pip install -e ".[ocr,dev]"
+pip install -e ".[dev]"
 
-# 2. run the whole thing (API + dashboard on http://127.0.0.1:8765)
-vi3ion serve
+# 2. check the install
+vi3ion doctor                      # OCR, RAM, registry, local runtimes, MCP entry point
+vi3ion mcp-check                   # real MCP handshake: does the server start?
 
 # 3. analyse an image from the CLI
 vi3ion analyze screenshot.png --detail standard
 vi3ion brief screenshot.png        # text-only brief for a vision-less model
 vi3ion score screenshot.png        # brief fidelity vs fixtures/*.expected.json
 vi3ion local                      # local LLM runtimes + the recommended Vi3ion role
-vi3ion doctor                    # one-shot setup check (OCR, RAM, wiring, runtimes)
 vi3ion ingest shots\ --label run # register a screenshot folder in the image memory
 vi3ion prune                   # drop remembered images whose file no longer exists
 vi3ion health --tier              # config, OCR status, machine tier
 
-# 4. run the test suite
+# 4. optional: the local dashboard (not needed by agents)
+vi3ion serve                       # API + dashboard on http://127.0.0.1:8765
+
+# 5. run the test suite
 pytest
 ```
 

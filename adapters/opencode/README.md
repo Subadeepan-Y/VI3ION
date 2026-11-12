@@ -6,17 +6,22 @@ perception channel.
 ## 1. Install the package
 
 ```powershell
-# from the Vi3ion project directory
-cd D:\PROJECTS\VI3ION
-.venv\Scripts\activate
-pip install -e ".[ocr]"
+pip install vi3ion            # plain install: OCR included (~200 MB of deps)
 ```
 
-Make sure `vi3ion-mcp` is on PATH (it is, if you used the venv). Test:
+or from a checkout:
 
 ```powershell
-vi3ion health
-vi3ion-mcp --help   # or just launch it once
+cd path\to\VI3ION
+.venv\Scripts\activate
+pip install -e .
+```
+
+Check it works:
+
+```powershell
+vi3ion doctor       # OCR, RAM, registry, local runtimes, MCP entry point
+vi3ion mcp-check    # real MCP handshake: does the server start and list tools?
 ```
 
 ## 2. Register the MCP server
@@ -28,12 +33,15 @@ OpenCode config lives at `~/.config/opencode/` (Windows:
 {
   "mcp": {
     "vi3ion": {
-      "type": "stdio",
-      "command": "D:\\PROJECTS\\VI3ION\\.venv\\Scripts\\vi3ion-mcp.exe",
-      "args": [],
-      "env": {
-        "VI3ION_DATA_DIR": "D:\\PROJECTS\\VI3ION\\data",
-        "VI3ION_ALLOWED_ROOTS": "D:\\PROJECTS\\VI3ION\\data;D:\\screenshots"
+      "type": "local",
+      "command": [
+        "C:\\path\\to\\python.exe",
+        "-m",
+        "vi3ion.mcp_server"
+      ],
+      "environment": {
+        "VI3ION_DATA_DIR": "C:\\Users\\you\\.vi3ion",
+        "VI3ION_ALLOWED_ROOTS": "C:\\path\\to\\your\\project;D:\\screenshots"
       }
     }
   }
@@ -42,8 +50,15 @@ OpenCode config lives at `~/.config/opencode/` (Windows:
 
 Notes:
 
-- Use the **absolute path** to the venv executable. If you installed with
-  `pip install -e .` into the global interpreter, use `vi3ion-mcp` directly.
+- The key is **`environment`**, not `env`. OpenCode ignores `env`, so those
+  variables would be dropped silently — `vi3ion doctor` reports this as
+  `mcp_env_key`.
+- `command` is an **array** for the `local` type.
+- Prefer running the module through your interpreter
+  (`python -m vi3ion.mcp_server`) over the generated `vi3ion-mcp.exe`
+  launcher: pip rewrites that launcher on every upgrade, and Windows refuses
+  to replace a file your editor still has open ("file is being used by another
+  process"), which breaks the upgrade.
 - `VI3ION_ALLOWED_ROOTS` controls which directories the agent's
   `inspect_image(path=...)` calls may read. Add the folders where your
   screenshots live.
@@ -53,16 +68,18 @@ Notes:
 
 ## 3. Install the skill
 
-Copy `skill/SKILL.md` into your agent's skill directory (e.g.
-`~/.config/opencode/skills/vi3ion/SKILL.md`), or reference it from your agent
-instructions. The skill tells the agent when and how to call the five tools.
+Copy `vi3ion/skill/SKILL.md` (shipped in the wheel) into your agent's skill
+directory (e.g. `~/.config/opencode/skills/vi3ion/SKILL.md`), or reference it
+from your agent instructions. The skill tells the agent when and how to call
+the tools. `vi3ion skill` prints the text if you would rather paste it.
 
 ## 4. Restart & verify
 
 1. Restart OpenCode.
-2. Ask: *"List your MCP tools."* — Vi3ion's five tools should appear
+2. Ask: *"List your MCP tools."* — Vi3ion's eleven tools should appear
    (`inspect_image`, `inspect_region`, `query_evidence`, `verify_claim`,
-   `compare_regions`).
+   `compare_regions`, `cross_check_text`, `list_images`, `remember_image`,
+   `diff_images`, `local_stack`, `doctor`).
 3. Give the agent a screenshot: *"What does this image show?"* — it should
    call `inspect_image` with the path, not guess.
 
@@ -70,10 +87,15 @@ instructions. The skill tells the agent when and how to call the five tools.
 
 | Symptom | Fix |
 |---|---|
-| Tools missing after restart | Check `opencode.json` is valid JSON and the exe path exists. Run `vi3ion-mcp` manually once. |
-| `inspect_image` refuses a path | The path is outside allowed roots. Add the directory to `VI3ION_ALLOWED_ROOTS`. |
-| Slow first analysis | First run downloads/loads ONNX OCR models (~20–40 MB). Subsequent runs are cached in SQLite. |
-| OCR "not available" | `vi3ion health` shows OCR status. Install `rapidocr-onnxruntime` (or tesseract) if missing. |
+| "MCP server process exited with code 1" | The launcher is stale or the package is broken. Run `vi3ion mcp-check`; reinstall with `pip install -U vi3ion`. |
+| "No module named 'agent_interface'" | An old launcher survived an upgrade. Reinstall the package (`pip install -U vi3ion`) — the legacy path now forwards to `vi3ion.mcp_server`. |
+| "MCP server process exited with code 255" | The server was killed (restarting the editor, or an upgrade replacing it). It respawns on the next request. |
+| Tools missing after restart | Check `opencode.json` is valid and `command` points at a real interpreter. Run `vi3ion mcp-check`. |
+| The MCP variables seem ignored | OpenCode reads `environment`, not `env`. `vi3ion doctor` reports this as `mcp_env_key`. |
+| `inspect_image` refuses a path | The path is outside allowed roots. Add the directory to `VI3ION_ALLOWED_ROOTS` (inside `environment`). |
+| Slow first analysis | First run loads the ONNX OCR models (~60 MB installed). Results are cached in SQLite afterwards. |
+| OCR "not available" | `vi3ion doctor` shows OCR status. Reinstall with `pip install -U vi3ion` (OCR is a core dependency). |
+| `pip install -U vi3ion` fails on Windows | "file is being used by another process": the running editor holds the old launcher. Close the editor, upgrade, reopen — or register the server as `python -m vi3ion.mcp_server`. |
 
 ## Navigation hints
 
