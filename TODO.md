@@ -9,7 +9,7 @@ Last updated: 2026-11-12 (during release polish).
       (old launchers keep working instead of crashing with ModuleNotFoundError)
 - [x] `pyproject.toml`: entry points point at `vi3ion.mcp_server:main`; package-data
       ships `core/ocr/models/*.onnx` + `skill/*.md`; slim core deps; extras
-      `[ocr]`, `[semantic]`, `[dashboard]`, `[dev]`
+      `[semantic]`, `[dashboard]`, `[dev]` (OCR moved into the core deps)
 - [x] `MANIFEST.in`: prune `dashboard/ .opencode/ data/ testing screenshots/` (the
       sdist would otherwise be ~200 MB of junk)
 - [x] Defaults are machine-independent: `data_dir` → `~/.vi3ion`;
@@ -17,6 +17,27 @@ Last updated: 2026-11-12 (during release polish).
 - [x] `vi3ion doctor` has an `mcp_entry_point` check that catches the stale-
       launcher failure mode
 - [x] MIT LICENSE + README install section
+- [x] **A plain `pip install vi3ion` no longer breaks the MCP server**: `httpx`
+      was imported at module level, so the server died on startup for anyone
+      without the dev extra. Now imported lazily.
+- [x] OCR is a **core dependency** (a perception product that cannot read text
+      is not finished). ~60 MB of ONNX runtime, one time.
+- [x] `vi3ion mcp-check` — a real MCP handshake; the answer to "my editor says
+      MCP failed".
+- [x] `vi3ion doctor` flags the `env` vs `environment` trap (OpenCode ignores
+      `env`, so every variable was silently dropped).
+- [x] Plugin: every hook body is wrapped in try/catch — a plugin bug can no
+      longer kill the session (this really happened: one bad line made OpenCode
+      log "Failed to drain Session" and stop running the hooks).
+- [x] Plugin: a dead MCP server is detected through `ctx.mcp.list()` status and
+      reloaded automatically (once a minute), so it recovers without an editor
+      restart.
+- [x] One data dir everywhere: `~/.vi3ion`. The plugin resolves it from the env,
+      then from the editor's MCP config, then the default — the plugin and the
+      server can no longer split the registry.
+- [x] Windows upgrade trap documented: `pip install -U vi3ion` fails while the
+      editor holds `vi3ion-mcp.exe`; register the server as
+      `python -m vi3ion.mcp_server` instead.
 - [ ] `gh repo create sub858/VI3ION --public` and push
 - [ ] CI (`.github/workflows/ci.yml`): py3.11/3.12 × ubuntu/macos/windows →
       pytest → `vi3ion score --all` floor ≥ 91.5% → doctor → `python -m build`
