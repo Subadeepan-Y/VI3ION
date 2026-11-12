@@ -5,10 +5,10 @@ on:
     types: [published]
   workflow_dispatch:
     inputs:
-      dry-run:
-        description: "Run without publishing"
+      dry_run:
+        description: "Run everything except the actual publish"
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
@@ -32,7 +32,12 @@ jobs:
       - name: Pack check
         run: npm pack --dry-run
       - name: Publish
-        if: ${{ github.event_name == 'release' || inputs.dry-run == false }}
+        if: ${{ github.event_name == 'release' || inputs.dry_run == false }}
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Verify
+        if: ${{ github.event_name == 'release' || inputs.dry_run == false }}
+        run: |
+          npm view @vi3ion/opencode version dist-tags --json
+          echo "published: $(npm view @vi3ion/opencode version)"
