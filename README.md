@@ -1,9 +1,21 @@
-# VI3ION — Visual Intelligence for AI Agents
+# VI3ION — Measured Visual Perception for AI Agents
 
-Vi3ion gives AI coding agents an **independent perception engine**: it looks at
-images, screenshots, and diagrams, and returns *structured evidence* — OCR text,
-coordinates, shapes, colours, measured relationships, and a scene graph — that
-an agent (or human) can reason over.
+VI3ION is a local perception engine for AI agents. It reads images, screenshots
+and diagrams, and returns **measured evidence** instead of guesses: OCR text
+with pixel coordinates, geometry, per-element colours with contrast ratios,
+spatial relations, and version diffs between two states of the same screen.
+
+It runs entirely on your machine, speaks the Model Context Protocol, and works
+with any MCP-capable agent — Claude Code, Cursor, Windsurf, Continue, Zed,
+OpenCode, and your own local models on Ollama, llama.cpp, LM Studio or vLLM.
+
+- **Measured, not inferred** — every value is read from the pixels and labelled
+  as observed, inferred, or unknown.
+- **Local-first** — no image ever leaves the machine; the OCR engine is ONNX.
+- **Agent-agnostic** — one MCP server; an optional OpenCode plugin adds
+  zero-config auto-analysis.
+- **Version-aware** — remembers every image it has seen and spots when the
+  same screen changed.
 
 ## Resource profile
 
@@ -13,20 +25,21 @@ inference burst).
 
 ## The text brief, measured
 
-A ~530-word brief that a model with **no vision** can reason over — no model
-calls, no network, ~5s on a 1919×949 screenshot:
+A brief that a model with **no vision** can reason over — no model calls, no
+network, ~5s on a 1919×949 screenshot:
 
 | Component | Score | What it measures |
 |---|---|---|
-| **Brief fidelity** | **83.5%** | weighted mean of the four rows below |
-| Text recall | 72.1% | share of real text that reached the brief (31/43 units) |
-| Text precision | 91.7% | share of the brief's quoted text that is really in the image |
-| Region accuracy | 83.9% | matched text filed under the right region |
-| Structure | 100% | composition line, 12-cell colour map, shape sentences, honesty note |
+| **Brief fidelity** | **91.9%** | weighted mean across the three bundled fixtures |
+| Text recall | 85.0% | share of real text that reached the brief |
+| Text precision | 92.4% | share of the brief's quoted text that is really in the image |
+| Region accuracy | 99.0% | matched text filed under the right region |
+| Structure | 100% | composition line, colour map, shape sentences, honesty note |
 
 ```bash
 vi3ion brief screenshot.png    # the brief itself
 vi3ion score screenshot.png    # score it against hand-transcribed ground truth
+vi3ion score --all             # score every bundled fixture
 ```
 
 Scores come from `tests/fixtures/*.expected.json` — hand-transcribed files of

@@ -16,7 +16,7 @@ Last updated: 2026-11-12 (during release polish).
       `allowed_roots` → cwd + data dir; no hardcoded `D:\PROJECTS\VI3ION`
 - [x] `vi3ion doctor` has an `mcp_entry_point` check that catches the stale-
       launcher failure mode
-- [x] MIT LICENSE + README install section
+- [x] Apache-2.0 LICENSE + NOTICE + README install section
 - [x] **A plain `pip install vi3ion` no longer breaks the MCP server**: `httpx`
       was imported at module level, so the server died on startup for anyone
       without the dev extra. Now imported lazily.
@@ -38,12 +38,12 @@ Last updated: 2026-11-12 (during release polish).
 - [x] Windows upgrade trap documented: `pip install -U vi3ion` fails while the
       editor holds `vi3ion-mcp.exe`; register the server as
       `python -m vi3ion.mcp_server` instead.
-- [ ] `gh repo create sub858/VI3ION --public` and push
+- [ ] `gh repo create SUBADEEPAN-Y/VI3ION --public` and push
 - [ ] CI (`.github/workflows/ci.yml`): py3.11/3.12 × ubuntu/macos/windows →
       pytest → `vi3ion score --all` floor ≥ 91.5% → doctor → `python -m build`
 - [ ] Release: `python -m build` → `twine check dist/*` → `gh release create
       v0.1.0 dist/*.whl dist/*.tar.gz` → clean-venv install proof:
-      `pip install https://github.com/sub858/VI3ION/releases/download/v0.1.0/vi3ion-0.1.0-py3-none-any.whl`
+      `pip install https://github.com/SUBADEEPAN-Y/VI3ION/releases/download/v0.1.0/vi3ion-0.1.0-py3-none-any.whl`
 - [ ] `plugins/opencode/` → npm package `@vi3ion/opencode` (verify with `npm pack`
       + install tarball in a scratch dir), or document the copy-into-plugins path
 - [ ] Skill: add `vi3ion/skill/SKILL.md` to `package-data` (done) and register it

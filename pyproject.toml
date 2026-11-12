@@ -1,15 +1,15 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "vi3ion"
 version = "0.1.0"
-description = "Visual intelligence for AI agents: measured visual perception over MCP."
+description = "Measured visual perception for AI agents: OCR, geometry, colour and version diffing over MCP."
 readme = "README.md"
 requires-python = ">=3.11"
-license = "MIT"
-license-files = ["LICENSE"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Subadeepan-Y" }]
 keywords = [
     "mcp",
@@ -63,10 +63,10 @@ vi3ion = "vi3ion.cli:main"
 vi3ion-mcp = "vi3ion.mcp_server:main"
 
 [project.urls]
-Homepage = "https://github.com/sub858/VI3ION"
-Repository = "https://github.com/sub858/VI3ION"
-Issues = "https://github.com/sub858/VI3ION/issues"
-Changelog = "https://github.com/sub858/VI3ION/releases"
+Homepage = "https://github.com/SUBADEEPAN-Y/VI3ION"
+Repository = "https://github.com/SUBADEEPAN-Y/VI3ION"
+Issues = "https://github.com/SUBADEEPAN-Y/VI3ION/issues"
+Changelog = "https://github.com/SUBADEEPAN-Y/VI3ION/releases"
 
 [tool.setuptools.packages.find]
 # vi3ion is the real package; agent_interface is a compat shim forwarding to
