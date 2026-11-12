@@ -1,68 +1,60 @@
-# Vi3ion — TODO / release checklist
+# VI3ION — TODO / release checklist
 
-Last updated: 2026-11-12 (during release polish).
+Last updated: 2026-11-12 (after the 0.1.0 release).
 
-## Short-term (before v0.1.0 release)
+## Shipped in 0.1.0
 
-- [x] Move MCP server into the package: `vi3ion/mcp_server.py`
+- [x] MCP server moved into the package: `vi3ion/mcp_server.py`
 - [x] Compat shim `agent_interface/mcp_server.py` → forwards to `vi3ion.mcp_server`
       (old launchers keep working instead of crashing with ModuleNotFoundError)
 - [x] `pyproject.toml`: entry points point at `vi3ion.mcp_server:main`; package-data
-      ships `core/ocr/models/*.onnx` + `skill/*.md`; slim core deps; extras
-      `[semantic]`, `[dashboard]`, `[dev]` (OCR moved into the core deps)
-- [x] `MANIFEST.in`: prune `dashboard/ .opencode/ data/ testing screenshots/` (the
-      sdist would otherwise be ~200 MB of junk)
+      ships `core/ocr/models/*.onnx` + `skill/SKILL.md`; core deps slimmed;
+      extras `[semantic]`, `[dashboard]`, `[dev]`
+- [x] `MANIFEST.in`: prune `dashboard/ .opencode/ data/ testing screenshots/`
+      (the sdist would otherwise be ~200 MB of junk)
 - [x] Defaults are machine-independent: `data_dir` → `~/.vi3ion`;
       `allowed_roots` → cwd + data dir; no hardcoded `D:\PROJECTS\VI3ION`
-- [x] `vi3ion doctor` has an `mcp_entry_point` check that catches the stale-
-      launcher failure mode
-- [x] Apache-2.0 LICENSE + NOTICE + README install section
-- [x] **A plain `pip install vi3ion` no longer breaks the MCP server**: `httpx`
-      was imported at module level, so the server died on startup for anyone
+- [x] A plain `pip install vi3ion` no longer breaks the MCP server: `httpx` was
+      imported at module level, so the server died on startup for anyone
       without the dev extra. Now imported lazily.
 - [x] OCR is a **core dependency** (a perception product that cannot read text
       is not finished). ~60 MB of ONNX runtime, one time.
 - [x] `vi3ion mcp-check` — a real MCP handshake; the answer to "my editor says
-      MCP failed".
-- [x] `vi3ion doctor` flags the `env` vs `environment` trap (OpenCode ignores
-      `env`, so every variable was silently dropped).
+      MCP failed"
+- [x] `vi3ion doctor` flags the `env` vs `environment` trap and accepts the
+      server under any spelling (`vi3ion` / `VI3ION`)
 - [x] Plugin: every hook body is wrapped in try/catch — a plugin bug can no
-      longer kill the session (this really happened: one bad line made OpenCode
-      log "Failed to drain Session" and stop running the hooks).
-- [x] Plugin: a dead MCP server is detected through `ctx.mcp.list()` status and
-      reloaded automatically (once a minute), so it recovers without an editor
-      restart.
-- [x] One data dir everywhere: `~/.vi3ion`. The plugin resolves it from the env,
-      then from the editor's MCP config, then the default — the plugin and the
-      server can no longer split the registry.
-- [x] Windows upgrade trap documented: `pip install -U vi3ion` fails while the
-      editor holds `vi3ion-mcp.exe`; register the server as
-      `python -m vi3ion.mcp_server` instead.
-- [ ] `gh repo create Subadeepan-Y/VI3ION --public` and push
-- [ ] CI (`.github/workflows/ci.yml`): py3.11/3.12 × ubuntu/macos/windows →
-      pytest → `vi3ion score --all` floor ≥ 91.5% → doctor → `python -m build`
-- [ ] Release: `python -m build` → `twine check dist/*` → `gh release create
-      v0.1.0 dist/*.whl dist/*.tar.gz` → clean-venv install proof:
-      `pip install https://github.com/Subadeepan-Y/VI3ION/releases/download/v0.1.0/vi3ion-0.1.0-py3-none-any.whl`
-- [ ] `plugins/opencode/` → npm package `@vi3ion/opencode` (verify with `npm pack`
-      + install tarball in a scratch dir), or document the copy-into-plugins path
-- [ ] Skill: add `vi3ion/skill/SKILL.md` to `package-data` (done) and register it
-      via the OpenCode plugin (`ctx.skill.add`, autoinvoke) + `vi3ion skill` CLI
-      that prints the skill text for `AGENTS.md`/`CLAUDE.md`/`.claude/skills/`
-- [ ] `adapters/*.md` per harness (claude-code, cursor, windsurf, continue, zed,
-      antigravity, quoder, pi, generic MCP) with verified config keys
+      longer kill the session; a dead MCP server is detected and restarted
+- [x] One data dir everywhere: `~/.vi3ion`. The plugin resolves it from the
+      env, then from the editor's MCP config, then the default.
+- [x] Apache-2.0 LICENSE + NOTICE; `project.urls` → `Subadeepan-Y/VI3ION`
+- [x] Public repo `Subadeepan-Y/VI3ION`, branch `main`, 10 commits
+- [x] CI (`.github/workflows/ci.yml`): 7 jobs green — ubuntu py3.11/3.12/3.13,
+      windows py3.12, macos py3.13, the clean-install check (wheel → empty venv →
+      MCP handshake), the plugin smoke suite, the 91.5% fidelity floor
+- [x] Release `v0.1.0` published with the wheel + sdist attached
+- [x] `plugins/opencode/` packaged as `@vi3ion/opencode` (packed, installed into
+      a scratch project, smoke suite green against the *installed* package)
+- [x] Skill: `vi3ion/skill/SKILL.md` ships in the wheel and the npm tarball, and
+      the plugin registers it with the editor (auto-invoke)
+- [x] `adapters/opencode/README.md` with the verified OpenCode config
+- [x] The MCP server name may be `vi3ion` or `VI3ION` — the key is the display
+      name and becomes the tool namespace; both work.
 
-## Later
+## Still to do
 
-- [ ] PyPI publish when ready (name free as of 2026-11-12); prefer trusted
-      publishing (OIDC). Rehearse on TestPyPI first.
-- [ ] npm publish `@vi3ion/opencode` (requires 2FA; unpublish only within 72h)
-- [ ] Ship a `vi3ion-mcp` self-check subcommand (`mcp-selfcheck`) that performs a
-      full stdio handshake (already covered by tests/test_mcp_handshake.py)
-- [ ] Version the MCP contract (`VI3ION_MCP_CONTRACT`) so harnesses pin the tools
-- [ ] Optional: bundle the rapidocr ONNX models officially (today they come from
-      the `rapidocr-onnxruntime` pip dependency)
-- [ ] Public docs site (or at least a proper rendered README with a screenshot)
+- [ ] npm publish of `@vi3ion/opencode` (the publish workflow is ready, uses the
+      `NPM_TOKEN` secret, and signs with provenance; waiting on an automation
+      token so CI can publish unattended)
+- [ ] PyPI (`pip install vi3ion`) — rehearse on TestPyPI first; prefer trusted
+      publishing (OIDC) over a long-lived token
+- [ ] `adapters/*.md` for the other harnesses (claude-code, cursor, windsurf,
+      continue, zed, antigravity, quoder, pi, generic MCP) with verified keys
+- [ ] `vi3ion skill` CLI that prints the skill text for `AGENTS.md`/`CLAUDE.md`
+- [ ] Version the MCP contract (`VI3ION_MCP_CONTRACT`) so harnesses can pin it
+- [ ] Ship a `vi3ion-mcp selfcheck` subcommand (the same handshake as
+      `vi3ion mcp-check`, for harnesses that prefer it)
+- [ ] Public docs site (or a rendered README with a screenshot)
 
 ## Known / accepted limits (not bugs)
 
@@ -70,3 +62,5 @@ Last updated: 2026-11-12 (during release polish).
   `japan_rec_crnn.onnx` (skipped in low-resource mode)
 - `score --all` fidelity is 91.9% on the bundled fixtures (see PERFORMANCE.md)
 - `agent_interface` is a legacy shim; prefer `vi3ion.mcp_server` in new code
+- The npm package ships the **plugin only** — the engine comes from PyPI or the
+  GitHub Release, so the install is two steps
