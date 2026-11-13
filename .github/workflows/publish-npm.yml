@@ -31,7 +31,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: "https://registry.npmjs.org"
+      - name: Point npm at the registry
+        # No registry-url here on purpose: setup-node would write an
+        # _authToken line into .npmrc, and npm then refuses to use the OIDC
+        # identity because a (placeholder) token is configured.
+        run: |
+          echo "registry=https://registry.npmjs.org/" >> "$HOME/.npmrc"
+          echo "//registry.npmjs.org/:_authToken=" >> "$HOME/.npmrc"
       - name: Install
         run: npm install
       - name: Use a recent npm
