@@ -19,7 +19,7 @@ const PYPI_JSON_URL = "https://pypi.org/pypi/vi3ion/json";
 const NPM_REGISTRY_URL =
   "https://registry.npmjs.org/@subadeepan_y%2fvi3ion-opencode";
 
-const UPDATE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const UPDATE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const FETCH_TIMEOUT_MS = 4000;
 
 export const UPDATE_CHECK_KEY = "vi3ion-updates";

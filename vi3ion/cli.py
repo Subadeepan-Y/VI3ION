@@ -728,14 +728,44 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             }
         )
 
-    # 6. Updates (cached; network only with --check-updates)
+    # 6. Updates (checks every 5 minutes; or force with --check-updates)
     try:
         from vi3ion.updates import auto_update_enabled, check, read_cache
+        import subprocess
 
-        if args.check_updates:
-            report = check(settings, force=True, timeout=4.0)
-        else:
-            report = read_cache(settings)
+        force_check = bool(getattr(args, "check_updates", False))
+        report = check(settings, force=force_check, timeout=4.0)
+
+        # Auto-update or prompt if update available
+        engine_entry = (report or {}).get("engine", {})
+        if engine_entry.get("update_available"):
+            latest_v = engine_entry.get("latest")
+            installed_v = engine_entry.get("installed")
+            if auto_update_enabled(settings):
+                if not getattr(args, "json", False):
+                    print(f"Auto-update: upgrading Vi3ion ({installed_v} -> {latest_v})...")
+                up_res = subprocess.run([sys.executable, "-m", "pip", "install", "-U", "vi3ion"], capture_output=True, text=True)
+                if up_res.returncode == 0:
+                    if not getattr(args, "json", False):
+                        print("Vi3ion successfully updated!")
+                    report = check(settings, force=True, timeout=4.0)
+                else:
+                    if not getattr(args, "json", False):
+                        print(f"Auto-update failed: {up_res.stderr.strip()[:200]}")
+            elif sys.stdin.isatty() and not getattr(args, "json", False):
+                try:
+                    ans = input(f"Vi3ion update available ({installed_v} -> {latest_v}). Update now? [y/N] ").strip().lower()
+                    if ans in ("y", "yes"):
+                        print(f"Upgrading Vi3ion ({installed_v} -> {latest_v})...")
+                        up_res = subprocess.run([sys.executable, "-m", "pip", "install", "-U", "vi3ion"], capture_output=True, text=True)
+                        if up_res.returncode == 0:
+                            print("Vi3ion successfully updated!")
+                            report = check(settings, force=True, timeout=4.0)
+                        else:
+                            print(f"Update failed: {up_res.stderr.strip()[:200]}")
+                except (EOFError, KeyboardInterrupt):
+                    pass
+
         if report:
             parts = []
             for key in ("engine", "plugin"):

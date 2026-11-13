@@ -1741,11 +1741,17 @@ export default Plugin.define({
       console.error(`[vi3ion-attach] update tool registration skipped: ${error.message}`);
     }
 
-    // Background update monitor: one cheap check (24h cache), non-blocking.
+    // Background update monitor: checks every 5 minutes (non-blocking).
     // Sets the pending flag used by the prompt hook to tell the agent.
     // Disable with plugin option "updatesCheck": false (tests / air-gapped).
     if (options.updatesCheck !== false) {
       void setupUpdateMonitor(ctx, options);
+      const updateInterval = setInterval(() => {
+        void setupUpdateMonitor(ctx, options);
+      }, 5 * 60 * 1000);
+      if (updateInterval && typeof updateInterval.unref === "function") {
+        updateInterval.unref();
+      }
     }
 
     // Persistent presence: appended to the system instructions of every model
@@ -2101,12 +2107,12 @@ export default Plugin.define({
         const note = updateBlockText(updatesPending);
         if (note) {
           await viewInstruction(ctx, event.sessionID, "vi3ion-update", note);
-          const today = new Date().toISOString().slice(0, 10);
+          const versionKey = `${updatesPending.engine ? "engine" : ""}:${updatesPending.plugin ? "plugin" : ""}`;
           const notified = await ctx.storage
             .get(UPDATE_NOTIFIED_KEY)
             .catch(() => null);
-          if (notified !== today) {
-            await ctx.storage.set(UPDATE_NOTIFIED_KEY, today).catch(() => {});
+          if (notified !== versionKey) {
+            await ctx.storage.set(UPDATE_NOTIFIED_KEY, versionKey).catch(() => {});
             const visible =
               "VI3ION update available: " +
               (updatesPending.engine

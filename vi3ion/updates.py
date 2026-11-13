@@ -28,7 +28,7 @@ from typing import Any
 PYPI_JSON_URL = "https://pypi.org/pypi/vi3ion/json"
 NPM_REGISTRY_URL = "https://registry.npmjs.org/@subadeepan_y%2fvi3ion-opencode"
 
-CACHE_TTL_S = 24 * 60 * 60
+CACHE_TTL_S = 5 * 60  # 5 minutes
 USER_AGENT = "vi3ion/update-check"
 
 
