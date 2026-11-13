@@ -65,7 +65,9 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish (Trusted Publishing / OIDC)
         if: ${{ (github.event_name == 'release' || inputs.dry_run == false) && steps.auth.outputs.mode == 'oidc' }}
-        run: npm publish --access public --provenance
+        # verbose: npm only explains an OIDC failure (e.g. "no trusted
+        # publisher") at that level, which makes the job diagnosable.
+        run: npm publish --access public --provenance --loglevel=verbose
         env:
           # setup-node writes a placeholder token into .npmrc; npm would use it
           # instead of the OIDC identity. An empty value makes npm fall back to
