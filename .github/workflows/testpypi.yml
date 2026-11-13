@@ -1,0 +1,43 @@
+name: Rehearse on TestPyPI
+
+# A full dry run of the PyPI upload against TestPyPI, using an API token
+# stored as the TEST_PYPI_TOKEN repository secret. Nothing here touches the
+# real index.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  testpypi:
+    name: testpypi rehearsal
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+      - name: Check
+        run: twine check dist/*
+      - name: Upload to TestPyPI
+        if: ${{ secrets.TEST_PYPI_TOKEN != '' }}
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+        run: twine upload --repository testpypi --skip-existing dist/*
+      - name: Install from TestPyPI
+        if: ${{ secrets.TEST_PYPI_TOKEN != '' }}
+        run: |
+          python -m venv /tmp/verify
+          /tmp/verify/bin/python -m pip install --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple vi3ion
+          /tmp/verify/bin/python -m vi3ion.cli mcp-check
