@@ -36,8 +36,9 @@ jobs:
         run: npm install
       - name: Use a recent npm
         # Trusted Publishing (OIDC) needs npm >= 11.5; Node 20 ships npm 10.
-        run: npm install -g npm@latest
-        run: npm --version
+        run: |
+          npm install -g npm@latest
+          npm --version
       - name: Pack check
         run: npm pack --dry-run
       - name: Detect the publishing path
