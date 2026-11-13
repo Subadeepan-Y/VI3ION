@@ -12,7 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 TMP = Path(tempfile.mkdtemp(prefix="vi3ion-dbg-"))
 (TMP / "data").mkdir()
 os.environ["VI3ION_DATA_DIR"] = str(TMP / "data")
-os.environ["VI3ION_ALLOWED_ROOTS"] = "D:/PROJECTS/VI3ION;" + str(TMP / "data")
+REPO = Path(__file__).resolve().parents[1]
+os.environ["VI3ION_ALLOWED_ROOTS"] = REPO.as_posix() + ";" + str(TMP / "data")
 os.environ["VI3ION_SEMANTIC_PROVIDER"] = "none"
 
 from vi3ion.config import get_settings  # noqa: E402

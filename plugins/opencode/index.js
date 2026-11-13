@@ -20,6 +20,14 @@ import { fileURLToPath } from "node:url";
 
 import { Plugin } from "@opencode/plugin";
 
+import {
+  UPDATE_NOTIFIED_KEY,
+  checkUpdates,
+  readAutoFlag,
+  updateSummary,
+  writeAutoFlag,
+} from "./updates.js";
+
 const IMAGE_EXT = /\.(png|jpe?g|jpeg|webp|gif|bmp|heic|avif)$/i;
 
 // MIME -> extension for inline (clipboard/pasted) attachments.
@@ -997,6 +1005,88 @@ function formatDiff(diff, olderName, newerName) {
 // The attachment arrives on the message (mime + bytes), so this is the only
 // place where clipboard images and file attachments can both be resolved.
 // Returns null when there is nothing new to analyse.
+// --- Update awareness ------------------------------------------------------
+// Reports only. Never installs on its own; every upgrade goes through the
+// OpenCode permission prompt first (see the vi3ion_update tool). Auto-update
+// consent just makes that prompt opt into "always allow" after the first time.
+let updatesPending = null; // { engine: bool, plugin: bool } | null
+
+function updateBlockText(pending) {
+  if (!pending) return "";
+  const bits = [];
+  if (pending.engine) bits.push("engine update: pip install -U vi3ion");
+  if (pending.plugin)
+    bits.push("plugin update: npm i -D @subadeepan_y/vi3ion-opencode@latest");
+  if (!bits.length) return "";
+  return (
+    "VI3ION update available — " +
+    bits.join("; ") +
+    ". If the user asks to update, call the vi3ion_update tool."
+  );
+}
+
+async function maybeRunEngineUpgrade(ctx, perms) {
+  const python = pythonPath();
+  if (!python) {
+    return "Cannot update: no Python with Vi3ion found (set VI3ION_PYTHON).";
+  }
+  try {
+    await ctx.permission.assert({
+      sessionID: perms && perms.sessionID,
+      agent: perms && perms.agent,
+      source:
+        perms && perms.messageID
+          ? { type: "tool", messageID: perms.messageID, id: perms.id || "vi3ion_update" }
+          : { type: "tool", id: "vi3ion_update" },
+      action: "vi3ion.update",
+      resources: ["engine"],
+      save: perms && perms.auto ? ["vi3ion.update"] : [],
+    });
+  } catch (error) {
+    return `Update declined: ${error && error.message ? error.message : "permission denied"}`;
+  }
+  return new Promise((resolve) => {
+    execFile(
+      python,
+      ["-m", "pip", "install", "-U", "vi3ion"],
+      { timeout: 300000, windowsHide: true, env: vi3ionEnv() },
+      (err, stdout, stderr) => {
+        if (err) {
+          resolve(
+            `Upgrade failed: ${err.message} — ${String(stderr || "").slice(-300)}`,
+          );
+        } else {
+          resolve("Engine upgraded to the latest vi3ion.");
+        }
+      },
+    );
+  });
+}
+
+async function setupUpdateMonitor(ctx, options) {
+  try {
+    const result = await checkUpdates(ctx, { python: pythonPath() });
+    if (!result) return;
+    const engine = !!(result.engine && result.engine.update_available);
+    const plugin = !!(result.plugin && result.plugin.update_available);
+    if (!engine && !plugin) return;
+    updatesPending = { engine, plugin };
+    // Auto-update consent: upgrade the engine at startup, still gated by the
+    // permission prompt (the user sees the first one and can pick "always").
+    if (engine) {
+      const auto = await readAutoFlag(ctx).catch(() => false);
+      if (auto) {
+        const text = await maybeRunEngineUpgrade(ctx, { auto: true });
+        if (!text.startsWith("Engine upgraded")) {
+          console.error(`[vi3ion-attach] auto-update: ${text}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`[vi3ion-attach] update monitor failed: ${error.message}`);
+  }
+}
+
 async function analyseMessageImages(ctx, event, model, vision, options) {
   const { images, text } = imagesFromMessages(event.messages);
   if (!images.length) return null;
@@ -1529,6 +1619,69 @@ export default Plugin.define({
     // (when to call which tool) even without reading the MCP instructions.
     await registerSkill(ctx);
 
+    // Update tool: the agent calls this when the user asks to update. The
+    // permission assert below is the "popup": OpenCode renders an allow/deny
+    // prompt, and the actual install only runs if the user approves. The
+    // engine upgrade runs here; the plugin cannot safely replace its own
+    // installed copy while loaded, so that part prints the exact npm command.
+    try {
+      if (ctx.tool && typeof ctx.tool.transform === "function") {
+        await ctx.tool.transform((editor) => {
+          editor.add({
+            name: "vi3ion_update",
+            description:
+              "Update VI3ION to the latest version. Ask permission first: " +
+              "the user sees an allow/deny prompt, and nothing installs without " +
+              "their approval. Use when the user asks to update VI3ION.",
+            input: {
+              type: "object",
+              properties: {
+                artifact: {
+                  type: "string",
+                  enum: ["engine", "plugin", "all"],
+                  description:
+                    "what to update: engine (pip), plugin (npm), or all (default)",
+                },
+              },
+              additionalProperties: false,
+            },
+            execute: async (input, context) => {
+              const artifact = (input && input.artifact) || "all";
+              const parts = [];
+              const perms = {
+                sessionID: context && context.sessionID,
+                agent: context && context.agent,
+                messageID: context && context.messageID,
+                id: context && context.id,
+              };
+              if (artifact === "engine" || artifact === "all") {
+                parts.push(await maybeRunEngineUpgrade(ctx, perms));
+                if (parts[parts.length - 1].startsWith("Engine upgraded")) {
+                  await checkUpdates(ctx, { python: pythonPath(), force: true }).catch(() => {});
+                }
+              }
+              if (artifact === "plugin" || artifact === "all") {
+                parts.push(
+                  "The plugin cannot safely replace its own installed copy while loaded. " +
+                    "Run this when convenient:\n  npm i -D @subadeepan_y/vi3ion-opencode@latest",
+                );
+              }
+              return { content: parts.join("\n") };
+            },
+          });
+        });
+      }
+    } catch (error) {
+      console.error(`[vi3ion-attach] update tool registration skipped: ${error.message}`);
+    }
+
+    // Background update monitor: one cheap check (24h cache), non-blocking.
+    // Sets the pending flag used by the prompt hook to tell the agent.
+    // Disable with plugin option "updatesCheck": false (tests / air-gapped).
+    if (options.updatesCheck !== false) {
+      void setupUpdateMonitor(ctx, options);
+    }
+
     // Persistent presence: appended to the system instructions of every model
     // request, and to compaction requests, so summarisation cannot silently
     // drop the fact that Vi3ion is the eyes/assistant in this session.
@@ -1764,6 +1917,46 @@ export default Plugin.define({
           } catch { /* best-effort ack */ }
         },
       });
+      editor.add({
+        name: "vi3ionversion",
+        description: "Show installed vs latest versions (engine + plugin) and update commands",
+        execute: async ({ sessionID }) => {
+          const result = await checkUpdates(ctx, { python: pythonPath() }).catch(() => null);
+          const summary = result ? updateSummary(result) : "update check unavailable (offline?)";
+          try {
+            await ctx.session.synthetic({
+              sessionID,
+              text: `Vi3ion versions\n${summary}`,
+            });
+          } catch { /* best-effort ack */ }
+        },
+      });
+      editor.add({
+        name: "vi3ionauto",
+        description: "Toggle auto-updates: /vi3ionauto on|off (default off)",
+        execute: async ({ sessionID, args }) => {
+          const raw = String((args && args.trim()) || "").split(/\s+/)[0].toLowerCase();
+          if (raw !== "on" && raw !== "off") {
+            const current = await readAutoFlag(ctx).catch(() => false);
+            try {
+              await ctx.session.synthetic({
+                sessionID,
+                text: `Auto-updates: ${current ? "on" : "off"} — usage: /vi3ionauto on|off`,
+              });
+            } catch { /* best-effort ack */ }
+            return;
+          }
+          await writeAutoFlag(ctx, raw === "on");
+          try {
+            await ctx.session.synthetic({
+              sessionID,
+              text:
+                `Auto-updates: ${raw === "on" ? "on" : "off"} — ` +
+                "updates still go through the permission prompt the first time.",
+            });
+          } catch { /* best-effort ack */ }
+        },
+      });
     });
 
     await ctx.session.hook("prompt", async (event) => {
@@ -1833,6 +2026,34 @@ export default Plugin.define({
           reason: "model switch",
           blocks: [{ key: "vi3ion-intro", chars: intro.length, text: intro }],
         });
+      }
+
+      // Update notice: quietly tell the agent an update exists (it can act on
+      // a user request later). Once per day, also post a visible synthetic
+      // message so the user sees it in the chat.
+      if (updatesPending) {
+        const note = updateBlockText(updatesPending);
+        if (note) {
+          await viewInstruction(ctx, event.sessionID, "vi3ion-update", note);
+          const today = new Date().toISOString().slice(0, 10);
+          const notified = await ctx.storage
+            .get(UPDATE_NOTIFIED_KEY)
+            .catch(() => null);
+          if (notified !== today) {
+            await ctx.storage.set(UPDATE_NOTIFIED_KEY, today).catch(() => {});
+            const visible =
+              "VI3ION update available: " +
+              (updatesPending.engine
+                ? "engine (pip install -U vi3ion)"
+                : "") +
+              (updatesPending.engine && updatesPending.plugin ? "; " : "") +
+              (updatesPending.plugin
+                ? "plugin (npm i -D @subadeepan_y/vi3ion-opencode@latest)"
+                : "") +
+              '. Say "update VI3ION" or run the command.';
+            await ctx.session.synthetic({ sessionID: event.sessionID, text: visible }).catch(() => {});
+          }
+        }
       }
     }
   },

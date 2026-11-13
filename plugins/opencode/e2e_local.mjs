@@ -5,11 +5,14 @@
 // plugin still produces usable evidence for such a model.
 import fs from "node:fs";
 import assert from "node:assert";
+import path from "node:path";
 
 import plugin from "./index.js";
 
-const IMG = "D:\\PROJECTS\\VI3ION\\data\\debug\\sample_ui_v2.png";
-const IMG_URI = "file:///D:/PROJECTS/VI3ION/data/debug/sample_ui_v2.png";
+const HERE = path.dirname(new URL(import.meta.url).pathname.replace(/^\//, ""));
+const REPO_DIR = path.resolve(HERE, "..", "..");
+const IMG = path.join(REPO_DIR, "data", "debug", "sample_ui_v2.png");
+const IMG_URI = "file:///" + IMG.replace(/\\/g, "/");
 assert.ok(fs.existsSync(IMG), "screenshot missing");
 
 let hooks = {};

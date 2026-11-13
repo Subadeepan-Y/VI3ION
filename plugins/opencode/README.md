@@ -1,8 +1,13 @@
 # @subadeepan_y/vi3ion-opencode
 
-The OpenCode plugin for [VI3ION](https://github.com/Subadeepan-Y/VI3ION) — a
-local perception engine that measures images (OCR, geometry, per-element colour,
-version diffs) and hands the results to your agent.
+**AI models cannot see. They read text.** VI3ION gives them eyes: it measures
+an image and hands the agent facts — the text with pixel coordinates, the real
+colours, the layout, and what changed since the last screenshot.
+
+This package is the optional **OpenCode plugin** for
+[VI3ION](https://github.com/Subadeepan-Y/VI3ION). It measures every image you
+paste, tells the agent it has eyes, and re-binds when you switch models
+mid-chat.
 
 ## Install
 
@@ -34,7 +39,19 @@ Then register the MCP server in `~/.config/opencode/opencode.jsonc`:
 The key is the server's **display name** and becomes the tool namespace
 (`VI3ION.inspect_image`). `vi3ion` works just as well.
 
-## What it does
+## What the agent gets
+
+```
+Image 1280x800 (settings.png). Top bar: "Settings" ink:#f8f8f8 on:#1e3a8a
+contrast:9.8 @[44, 32, 168, 69]. Centre: "Save" ink:#f8f8f8 on:#2563eb
+contrast:4.9 @[373, 619, 421, 640].
+```
+
+*White text, blue button, contrast 4.9, those exact pixels.* The agent can
+answer questions about the screen, point at a button, or check a claim
+("are Save and Cancel aligned?") and get a verdict with measurements.
+
+## What the plugin does
 
 - **Measures every attached image** and attaches the evidence to the request —
   the agent never has to think about it
@@ -60,9 +77,9 @@ Apache-2.0
 
 ---
 
-# Vi3ion auto-attach plugin
+## Plugin behaviour in detail
 
-## Behavior guarantees
+### Behavior guarantees
 
 - **Blocking**: analysis runs inside prompt admission, *before* the model
   receives the image. The model stays idle until evidence is ready — it never
@@ -75,7 +92,7 @@ Apache-2.0
   *"Vi3ion analysis failed… Do not guess image contents"* — it never fabricates
   visual claims in silence.
 
-## First-turn introduction and persistent presence
+### First-turn introduction and persistent presence
 
 On the first prompt of every conversation, Vi3ion injects a `vi3ion-intro` block
 that introduces itself to the agent and asks it to self-assess:
@@ -107,7 +124,7 @@ A compact `Vi3ion presence` line is also appended to **every model request**
 and to **compaction requests**, so the role survives long conversations and
 context summarisation.
 
-## Image analysis (message level)
+### Image analysis (message level)
 
 OpenCode delivers an attachment on the **message**, not on the prompt:
 
@@ -128,7 +145,7 @@ place where the mime type and the bytes exist:
 Every injection is recorded in `data/inbox/last-injection.json`: the exact text
 the model received, with the model, the role and the reason.
 
-## Colours in the evidence
+### Colours in the evidence
 
 The injected brief carries a measured colour for every element:
 
@@ -145,14 +162,14 @@ colour too (`in the centre, blue (#2868e8)`).
 > `list_images` missing), restart the editor so the MCP server re-registers its
 > tool list.
 
-## Clipboard and inline images
+### Clipboard and inline images
 
 Attachments are detected by MIME type, by file extension and by the URI inside
 `source.uri`. Inline attachments (clipboard paste: base64 `data` + `mime`) are
 written to `data/inbox/` and analysed like any other image — a clipboard
 screenshot is measured, never ignored. The user's chat text is never modified.
 
-## Model switching mid-conversation
+### Model switching mid-conversation
 
 A user can switch models while chatting. The new model has never seen Vi3ion,
 so the plugin:
@@ -171,7 +188,7 @@ Vision detection uses, in order: the model's declared input modalities
 (`capabilities.input`), known vision model names, and — for local runtimes —
 name heuristics (`llava`, `qwen2.5-vl`, `minicpm-v`, `gemma3`, …).
 
-## Local runtimes (Ollama, llama.cpp, LM Studio, vLLM, Unsloth, SGLang, …)
+### Local runtimes (Ollama, llama.cpp, LM Studio, vLLM, Unsloth, SGLang, …)
 
 Local models are supported explicitly:
 
@@ -195,7 +212,7 @@ Local models are supported explicitly:
 
 See `LOCAL_MODELS.md` in the project root for the full local workflow.
 
-## Image memory and version diff
+### Image memory and version diff
 
 Every analysis registers an identity signature (OCR fingerprint + coarse layout
 + perceptual hash) in Vi3ion's SQLite registry. The perceptual hash recognises
@@ -229,7 +246,7 @@ vi3ion ingest shots\ --label run   # register a screenshot folder
 vi3ion prune                        # drop images whose file is gone
 ```
 
-## Two roles, chosen from the active model:
+### Two roles, chosen from the active model:
 
 - **Visionless model** → Vi3ion is the eyes: the plugin runs Vi3ion on the
   image and injects a `vi3ion-auto` evidence block (OCR, layout, path
@@ -241,7 +258,7 @@ vi3ion prune                        # drop images whose file is gone
   coordinates, measured colour/geometry via `verify_claim` / `inspect_region`).
   No heavy OCR block is injected; the image passes through untouched.
 
-## On/off
+### On/off
 
 Plugin is ON by default. Toggle with slash commands:
 
@@ -255,17 +272,19 @@ Plugin is ON by default. Toggle with slash commands:
 - `/vi3ionlocal` — list local LLM runtimes and the models they serve
 - `/vi3iondiff <older> <newer>` — compare two images from the chat
 - `/vi3iondoctor` — self-check: OCR, RAM, registry, local runtimes, editor wiring
+- `/vi3ionversion` — installed vs latest versions (engine + plugin) and update commands
+- `/vi3ionauto on|off` — toggle auto-updates (default off)
 
 The state is stored per plugin and persists across sessions.
 
-## Evidence tiers (auto)
+### Evidence tiers (auto)
 
 - Model context < 32K → **compact** (lines like
   `top "SUBADEEPAN" @88,24,274,54 (top-left)`) to save tokens.
 - Model context >= 32K → **full** (prose brief + markdown layout table).
 - Explicit `/vi3ioncompact` / `/vi3ionfull` overrides the auto choice.
 
-## How it works
+### How it works
 
 - Hooks OpenCode's `prompt` admission.
 - On the first prompt of a conversation, injects a `vi3ion-intro` self-check
@@ -282,12 +301,12 @@ The state is stored per plugin and persists across sessions.
   the evidence before replying.
 - Dedupes repeated analysis of the same file (last 120 entries).
 
-## Options (in `opencode.jsonc`)
+### Options (in `opencode.jsonc`)
 
 ```jsonc
 {
   "plugin": [
-    { "package": "D:\\PROJECTS\\VI3ION\\.opencode\\plugins\\vi3ion-attach",
+    { "package": "@subadeepan_y/vi3ion-opencode",
       "options": { "mode": "auto", "codeCheck": true } }
   ]
 }
@@ -300,12 +319,33 @@ The state is stored per plugin and persists across sessions.
 - `confirmOnly`: force the vision-role mode (assistant note) even for visionless
   models (default `false`).
 
+### Updates
+
+The plugin checks once a day (24h cache) whether a newer engine or plugin
+exists and tells the agent — and the user — when one does. Nothing installs
+on its own:
+
+- **Agent path**: when the user asks to update, the agent calls the
+  `vi3ion_update` tool. That tool first asks permission via OpenCode's prompt
+  (an allow/deny dialog), and only an approval runs the engine upgrade
+  (`pip install -U vi3ion`). The plugin cannot safely replace its own
+  installed copy, so the npm command is printed for the user.
+- **Auto-updates**: opt-in, off by default. `vi3ion updates auto on` (CLI)
+  or `/vi3ionauto on` enables it — the first upgrade still shows the
+  permission prompt, and you can pick "always allow" there. Auto mode only
+  upgrades the engine at session start, never mid-conversation.
+- The shared state is visible to the CLI: `vi3ion version` shows both lines.
+
 ## Environment
 
-- Uses `%VI3ION_PYTHON%` if set, else `D:\PROJECTS\VI3ION\.venv\Scripts\python.exe`.
-- Set `VI3ION_CODE_ROOTS` for code cross-check to be useful.
+- Python is resolved automatically: `%VI3ION_PYTHON%` if set, else the
+  workspace/repo `.venv`, else `python3` / `python` on `PATH` — and the
+  candidate is only accepted when `import vi3ion` works. No machine-specific
+  path is baked in.
+- Set `VI3ION_CODE_ROOTS` (semicolon-separated) to make code cross-check
+  useful.
 
-## Test
+### Test
 
 ```powershell
 node .\smoke.mjs

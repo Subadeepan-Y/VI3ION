@@ -5,10 +5,13 @@
 // This proves the plugin can analyse what a real session delivers.
 import fs from "node:fs";
 import assert from "node:assert";
+import path from "node:path";
 
 import plugin from "./index.js";
 
-const FIXTURE = "D:\\PROJECTS\\VI3ION\\data\\inbox\\real-attachment.json";
+const HERE = path.dirname(new URL(import.meta.url).pathname.replace(/^\//, ""));
+const REPO_DIR = path.resolve(HERE, "..", "..");
+const FIXTURE = path.join(REPO_DIR, "data", "inbox", "real-attachment.json");
 if (!fs.existsSync(FIXTURE)) {
   console.log("E2E REAL skipped (no real attachment captured)");
   process.exit(0);

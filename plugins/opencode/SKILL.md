@@ -33,6 +33,7 @@ of the same screen.
 | `diff_images` | Compare two stored images: text/layout changes **and** a pixel-level comparison. |
 | `local_stack` | Which local LLM runtimes are serving (Ollama, llama.cpp, LM Studio, vLLM, …) and whether they accept images. |
 | `doctor` | Setup self-check: OCR status, RAM/tier, registry, local runtimes, MCP entry point. |
+| `vi3ion_update` (plugin tool) | Only when the user asks to update VI3ION: it asks permission and then runs the install. Never call it unprompted. |
 
 ## Rules
 

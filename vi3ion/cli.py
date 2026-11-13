@@ -517,6 +517,86 @@ def cmd_skill(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_version(args: argparse.Namespace) -> int:
+    """Compare installed versions with the latest on PyPI (engine) and npm (plugin)."""
+    from vi3ion.updates import auto_update_enabled, check, table_text
+
+    settings = get_settings()
+    settings.ensure_dirs()
+    result = check(settings, force=args.force, timeout=args.timeout)
+    if args.json:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    print(f"Vi3ion {_version()} — update check")
+    print(table_text(result))
+    state = "on" if auto_update_enabled(settings) else "off"
+    print(f"auto-updates: {state} (off is the safe default; enable with 'vi3ion updates auto on')")
+    return 0
+
+
+def cmd_updates(args: argparse.Namespace) -> int:
+    """Show or change the auto-update consent flag."""
+    from vi3ion.updates import auto_update_enabled, read_cache, set_auto_update, table_text
+
+    settings = get_settings()
+    settings.ensure_dirs()
+
+    if args.updates_action == "auto":
+        if args.value in ("on", "off"):
+            prefs = set_auto_update(settings, args.value == "on")
+            if args.json:
+                print(json.dumps({"updates_auto": prefs["updates_auto"]}, indent=2))
+            else:
+                print(f"auto-updates: {'on' if prefs['updates_auto'] else 'off'}")
+            return 0
+        if args.json:
+            print(json.dumps({"updates_auto": auto_update_enabled(settings)}, indent=2))
+        else:
+            print(f"auto-updates: {'on' if auto_update_enabled(settings) else 'off'}")
+        return 0
+
+    cached = read_cache(settings)
+    if not cached:
+        print("no update check yet — run 'vi3ion version' to check online")
+        return 0
+    print(table_text(cached))
+    print(f"auto-updates: {'on' if auto_update_enabled(settings) else 'off'}")
+    return 0
+
+
+def _maybe_ask_auto_updates(settings) -> str | None:
+    """One-time interactive consent on first command run.
+
+    Interactive terminals get a yes/no question. Non-interactive (agent- or
+    pipe-routed) invocations leave the flag unset and return a hint the agent
+    can relay to the user.
+    """
+    try:
+        from vi3ion.updates import read_prefs, set_auto_update
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        prefs = read_prefs(settings)
+    except Exception:  # noqa: BLE001
+        return None
+    if "updates_auto" in prefs:
+        return None
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        try:
+            answer = input("Enable auto-updates for Vi3ion? [y/N] ").strip().lower()
+        except EOFError:
+            answer = ""
+        if answer in ("y", "yes"):
+            set_auto_update(settings, True)
+            return "auto-updates enabled (change anytime with 'vi3ion updates auto off')."
+        set_auto_update(settings, False)
+        return "auto-updates left OFF (safe default); enable anytime with 'vi3ion updates auto on'."
+    return (
+        "auto-updates are OFF by default. To enable: 'vi3ion updates auto on' "
+        "(or ask your agent to run it)."
+    )
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     """One-shot setup check: OCR, resources, registry, local runtimes, editor wiring."""
     settings = get_settings()
@@ -638,7 +718,56 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             }
         )
 
-    # 6. MCP server entry point: the module must import and the console script
+    # 6. Updates (cached; network only with --check-updates)
+    try:
+        from vi3ion.updates import auto_update_enabled, check, read_cache
+
+        if args.check_updates:
+            report = check(settings, force=True, timeout=4.0)
+        else:
+            report = read_cache(settings)
+        if report:
+            parts = []
+            for key in ("engine", "plugin"):
+                entry = report.get(key) or {}
+                if entry.get("update_available"):
+                    parts.append(
+                        f"{key} {entry.get('installed')} -> {entry.get('latest')}"
+                    )
+            detail = "; ".join(parts) or "all current"
+            if report.get("offline"):
+                detail += " (offline, last known state)"
+            if parts:
+                checks.append(
+                    {
+                        "check": "updates",
+                        "ok": True,
+                        "blocking": False,
+                        "detail": detail,
+                    }
+                )
+            else:
+                checks.append(
+                    {
+                        "check": "updates",
+                        "ok": True,
+                        "blocking": False,
+                        "detail": f"{detail}; auto-updates={'on' if auto_update_enabled(settings) else 'off'}",
+                    }
+                )
+        else:
+            checks.append(
+                {
+                    "check": "updates",
+                    "ok": True,
+                    "blocking": False,
+                    "detail": "not checked yet — run 'vi3ion version' (or doctor --check-updates)",
+                }
+            )
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 7. MCP server entry point: the module must import and the console script
     # must resolve. This catches the "No module named 'agent_interface'"
     # failure mode from stale launchers.
     mcp_entry_ok = False
@@ -665,6 +794,14 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         }
     )
 
+    # First-run auto-update consent (interactive TTY, or a hint for agents).
+    consent_note = _maybe_ask_auto_updates(settings)
+    if consent_note:
+        payload_actions = _doctor_actions(checks, local)
+        payload_actions.append(consent_note)
+    else:
+        payload_actions = _doctor_actions(checks, local)
+
     payload = {
         "ok": all(c["ok"] for c in checks if c.get("blocking", True)),
         "version": _version(),
@@ -672,7 +809,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         "allowed_roots": [str(r) for r in settings.allowed_roots],
         "checks": checks,
         "local": local,
-        "next_actions": _doctor_actions(checks, local),
+        "next_actions": payload_actions,
     }
     if args.json:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
@@ -998,7 +1135,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="one-shot setup check: OCR, resources, registry, local runtimes, editor wiring",
     )
     doctor.add_argument("--json", action="store_true", help="emit JSON")
+    doctor.add_argument(
+        "--check-updates",
+        action="store_true",
+        help="also hit PyPI/npm for a live update check (bypasses the 24h cache)",
+    )
     doctor.set_defaults(func=cmd_doctor)
+
+    version = sub.add_parser(
+        "version",
+        help="compare installed versions with the latest on PyPI (engine) and npm (plugin)",
+    )
+    version.add_argument("--force", action="store_true", help="bypass the 24h cache")
+    version.add_argument("--timeout", type=float, default=4.0, help="network timeout in seconds")
+    version.add_argument("--json", action="store_true", help="emit JSON")
+    version.set_defaults(func=cmd_version)
+
+    updates = sub.add_parser(
+        "updates",
+        help="show the last update check, or change the auto-update consent",
+    )
+    updates.add_argument("--json", action="store_true", help="emit JSON")
+    updates_sub = updates.add_subparsers(dest="updates_action")
+    auto = updates_sub.add_parser(
+        "auto",
+        help="get or set auto-update consent (on|off); omit the value to print the current state",
+    )
+    auto.add_argument("value", nargs="?", choices=["on", "off"], help="on or off")
+    auto.add_argument("--json", action="store_true", help="emit JSON")
+    auto.set_defaults(func=cmd_updates)
+    updates.set_defaults(func=cmd_updates)
 
     mcp_check = sub.add_parser(
         "mcp-check",

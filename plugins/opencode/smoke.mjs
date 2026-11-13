@@ -84,7 +84,7 @@ function makeCtx(model, initialEnabled = undefined, opts = {}) {
         }
       : null;
   return {
-    options: { mode: "always", codeCheck: false },
+    options: { mode: "always", codeCheck: false, updatesCheck: false },
     _store: store,
     _instructions: instructionsStore,
     storage: {
@@ -161,10 +161,11 @@ const clipboardMessage = () => ({
 commands = [];
 const visionlessCtx = makeCtx({ providerID: "inception", id: "mercury-3" });
 await plugin.setup(visionlessCtx);
-assert.strictEqual(commands.length, 9, "expected on/off/compact/full/status/budget/local/diff/doctor commands");
+assert.strictEqual(commands.length, 11, "expected on/off/compact/full/status/budget/local/diff/doctor/version/auto commands");
 for (const name of [
   "vi3ionon", "vi3ionoff", "vi3ioncompact", "vi3ionfull",
   "vi3ionstatus", "vi3ionbudget", "vi3ionlocal", "vi3iondiff", "vi3iondoctor",
+  "vi3ionversion", "vi3ionauto",
 ]) {
   assert.ok(commands.some((c) => c.name === name), `missing command ${name}`);
 }

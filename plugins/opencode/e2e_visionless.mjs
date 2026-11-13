@@ -4,14 +4,20 @@
 // plugin sees it inside OpenCode with a visionless active model.
 import fs from "node:fs";
 import assert from "node:assert";
+import path from "node:path";
 
 import plugin from "./index.js";
 
-// Code cross-check roots for the child Python process (inherited env).
-process.env.VI3ION_CODE_ROOTS = "D:\\PROJECTS\\VI3ION;C:\\Users\\ADMIN\\.config\\opencode";
+const HERE = path.dirname(new URL(import.meta.url).pathname.replace(/^\//, ""));
+const REPO_DIR = path.resolve(HERE, "..", "..");
 
-const IMG = "D:\\PROJECTS\\VI3ION\\data\\debug\\sample_ui_v2.png";
-const IMG_URI = "file:///D:/PROJECTS/VI3ION/data/debug/sample_ui_v2.png";
+// Code cross-check roots for the child Python process (inherited env).
+// Defaults to this repository; override with VI3ION_CODE_ROOTS.
+process.env.VI3ION_CODE_ROOTS =
+  process.env.VI3ION_CODE_ROOTS || REPO_DIR;
+
+const IMG = path.join(REPO_DIR, "data", "debug", "sample_ui_v2.png");
+const IMG_URI = "file:///" + IMG.replace(/\\/g, "/");
 assert.ok(fs.existsSync(IMG), "screenshot missing");
 
 let hooks = {};
