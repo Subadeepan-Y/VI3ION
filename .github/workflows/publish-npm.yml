@@ -1,5 +1,10 @@
 name: Publish npm package
 
+# Publishing paths, in order:
+#   1. npm Trusted Publishing (OIDC) - no secret needed, the runner's identity
+#      is exchanged for a short-lived publish token.
+#   2. A token from the NPM_TOKEN secret - only used when no trusted publisher
+#      is configured for this repository.
 on:
   release:
     types: [published]
@@ -31,20 +36,24 @@ jobs:
         run: npm install
       - name: Pack check
         run: npm pack --dry-run
-      - name: Publish
-        if: ${{ github.event_name == 'release' || inputs.dry_run == false }}
+      - name: Detect the publishing path
+        id: auth
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ -n "${{ secrets.NPM_TOKEN }}" ]; then
-            echo "publishing with the NPM_TOKEN secret"
-            npm publish --access public --provenance
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "mode=token" >> "$GITHUB_OUTPUT"
           else
-            # No token: npm exchanges the runner's OIDC identity for a
-            # short-lived publish token (Trusted Publishing).
-            echo "publishing with npm Trusted Publishing (OIDC)"
-            npm publish --access public --provenance --omit=optional
+            echo "mode=oidc" >> "$GITHUB_OUTPUT"
           fi
+      - name: Publish (token)
+        if: ${{ (github.event_name == 'release' || inputs.dry_run == false) && steps.auth.outputs.mode == 'token' }}
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish (Trusted Publishing / OIDC)
+        if: ${{ (github.event_name == 'release' || inputs.dry_run == false) && steps.auth.outputs.mode == 'oidc' }}
+        run: npm publish --access public --provenance
       - name: Verify
         if: ${{ github.event_name == 'release' || inputs.dry_run == false }}
         run: |
