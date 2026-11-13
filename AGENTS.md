@@ -21,8 +21,11 @@ ratios, spatial relations, and diffs between two states of the same screen.
 python -m pip install vi3ion
 ```
 
-Python 3.11 or newer is required. If the install is slow, it is pulling the
-ONNX runtime (~60 MB) — that is expected and happens once.
+Python 3.11 or newer is required. The install pulls the ONNX runtime and
+OpenCV (~100 MB of wheels). If one large wheel crawls, that is the CDN route
+for that file, not the package: re-running the install uses pip's cache and is
+instant. `pip config set cache-dir <a fast disk>` puts that cache somewhere
+quick.
 
 If the human prefers the GitHub Release (no PyPI):
 
