@@ -54,6 +54,11 @@ jobs:
       - name: Publish (Trusted Publishing / OIDC)
         if: ${{ (github.event_name == 'release' || inputs.dry_run == false) && steps.auth.outputs.mode == 'oidc' }}
         run: npm publish --access public --provenance
+        env:
+          # setup-node writes a placeholder token into .npmrc; npm would use it
+          # instead of the OIDC identity. An empty value makes npm fall back to
+          # the trusted-publishing exchange.
+          NODE_AUTH_TOKEN: ""
       - name: Verify
         if: ${{ github.event_name == 'release' || inputs.dry_run == false }}
         run: |
