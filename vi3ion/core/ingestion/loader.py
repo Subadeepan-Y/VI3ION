@@ -155,7 +155,37 @@ class ImageLoader:
         self.db.add_image(asset.as_record())
         return asset.as_record(), False
 
+    def ingest_clipboard(self) -> tuple[dict, bool]:
+        """Ingest an image from the system clipboard."""
+        try:
+            from PIL import ImageGrab
+            clip = ImageGrab.grabclipboard()
+        except Exception as exc:
+            raise IngestError(f"failed to access clipboard: {exc}") from exc
+
+        if clip is None:
+            raise IngestError("clipboard does not contain an image or screenshot")
+
+        if isinstance(clip, list):
+            for item in clip:
+                p = Path(item)
+                if p.is_file() and p.suffix.lower().lstrip(".") in {
+                    fmt.lower() for fmt in SUPPORTED_FORMATS.values()
+                }:
+                    return self.ingest_path(p, source="clipboard")
+            raise IngestError(f"clipboard file list contains no supported image: {clip}")
+
+        if isinstance(clip, Image.Image):
+            buf = io.BytesIO()
+            clip.save(buf, format="PNG")
+            return self.ingest_bytes(buf.getvalue(), filename="clipboard.png", source="clipboard")
+
+        raise IngestError(f"unsupported clipboard content type: {type(clip).__name__}")
+
     def ingest_path(self, path: str | Path, source: str = "path") -> tuple[dict, bool]:
+        path_str = str(path).strip()
+        if path_str.lower() in ("clipboard", ":clipboard:", "@clipboard", "clip"):
+            return self.ingest_clipboard()
         candidate = Path(path).expanduser()
         if not candidate.is_absolute():
             candidate = (Path.cwd() / candidate).resolve()

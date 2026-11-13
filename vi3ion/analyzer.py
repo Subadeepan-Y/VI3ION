@@ -16,6 +16,7 @@ surfaced here; it belongs in debug logs.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -126,12 +127,22 @@ def _group_rows(items: list[TextItem]) -> list[list[TextItem]]:
     rows: list[list[TextItem]] = []
     for item in ordered:
         y0, y1 = item.bbox[1], item.bbox[3]
+        item_h = y1 - y0
+        item_w = item.bbox[2] - item.bbox[0]
+        if item_h > 1.8 * item_w and item_h > 25:
+            rows.append([item])
+            continue
         placed = False
         for row in rows:
             r0 = min(i.bbox[1] for i in row)
             r1 = max(i.bbox[3] for i in row)
+            r_h = r1 - r0
+            if r_h <= 0 or item_h <= 0:
+                continue
+            if min(item_h, r_h) / max(item_h, r_h) < 0.4:
+                continue
             overlap = min(y1, r1) - max(y0, r0)
-            if overlap > 0.5 * min(y1 - y0, r1 - r0):
+            if overlap > 0.5 * min(item_h, r_h):
                 row.append(item)
                 placed = True
                 break
@@ -163,10 +174,20 @@ def _assign_regions(items: list[TextItem], width: int, height: int) -> None:
         item.region = _region_of(item.bbox, width, height)
 
 
+_CODE_OR_SYNTAX_RE = re.compile(
+    r"(?:[{};=]|\b(?:const|let|var|function|return|import|export|await|async|def|class|if|for|while|null|true|false)\b|//|\\\\|[a-zA-Z_]\w*\s*\(|:\s*['\"])",
+    re.IGNORECASE,
+)
+
+
 def _is_body_text(item: TextItem) -> bool:
-    """Paragraph prose: short item, contains lowercase, not a bare number."""
+    """Paragraph prose: short item, contains lowercase, not code or bare number."""
     h = item.bbox[3] - item.bbox[1]
     if not 10 <= h <= 40:
+        return False
+    if re.match(r"^\d{1,3}\b", item.value.strip()):
+        return False
+    if _CODE_OR_SYNTAX_RE.search(item.value):
         return False
     if any(ch.islower() for ch in item.value):
         return True

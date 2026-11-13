@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vi3ion"
-version = "0.1.1"
+version = "0.1.2"
 description = "Measured visual perception for AI agents: OCR, geometry, colour and version diffing over MCP."
 readme = "README.md"
 requires-python = ">=3.11"

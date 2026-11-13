@@ -66,3 +66,18 @@ def test_ingest_path_record(engine, sample_ui_bytes):
 def test_ingest_path_outside_roots(engine):
     with pytest.raises(IngestError):
         engine.ingest_path("C:/Windows/System32/notepad.exe")
+
+
+def test_ingest_clipboard(engine, monkeypatch):
+    img = Image.fromarray(np.zeros((30, 40, 3), dtype=np.uint8))
+    monkeypatch.setattr("PIL.ImageGrab.grabclipboard", lambda: img)
+    record, deduplicated = engine.loader.ingest_path("clipboard")
+    assert record["width"] == 40
+    assert record["height"] == 30
+    assert record["source"] == "clipboard"
+
+    # Empty clipboard raises IngestError
+    monkeypatch.setattr("PIL.ImageGrab.grabclipboard", lambda: None)
+    with pytest.raises(IngestError):
+        engine.loader.ingest_path("clipboard")
+

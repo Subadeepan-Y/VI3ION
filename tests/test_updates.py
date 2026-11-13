@@ -30,10 +30,10 @@ def fake_registries(monkeypatch):
     """Point the update check at fake latest versions."""
 
     def fake_engine(timeout=4.0):
-        return "0.1.2"  # newer than the installed engine (0.1.1)
+        return "0.1.3"  # newer than the installed engine (0.1.2)
 
     def fake_plugin(timeout=4.0):
-        return "0.1.4"  # newer than anything installed
+        return "0.1.5"  # newer than anything installed
 
     monkeypatch.setattr("vi3ion.updates.latest_engine_from_pypi", fake_engine)
     monkeypatch.setattr("vi3ion.updates.latest_plugin_from_npm", fake_plugin)
@@ -67,8 +67,8 @@ def test_check_reports_updates(tmp_path, monkeypatch, fake_registries):
 
     result = check(S(), force=True)
     assert result["engine"]["update_available"] is True
-    assert result["engine"]["latest"] == "0.1.2"
-    assert result["plugin"]["latest"] == "0.1.4"
+    assert result["engine"]["latest"] == "0.1.3"
+    assert result["plugin"]["latest"] == "0.1.5"
     assert result["offline"] is False
     # The report is cached on disk.
     assert cache_path(S()).exists()
@@ -79,7 +79,7 @@ def test_check_uses_cache_without_refetch(tmp_path, monkeypatch, fake_registries
         data_dir = tmp_path
 
     calls = {"n": 0}
-    real_engine = lambda timeout=4.0: calls.__setitem__("n", calls["n"] + 1) or "0.1.2"  # noqa: E731
+    real_engine = lambda timeout=4.0: calls.__setitem__("n", calls["n"] + 1) or "0.1.3"  # noqa: E731
     monkeypatch.setattr("vi3ion.updates.latest_engine_from_pypi", real_engine)
 
     check(S(), force=True)
@@ -95,7 +95,7 @@ def test_check_cache_expires(tmp_path, monkeypatch, fake_registries):
         data_dir = tmp_path
 
     calls = {"n": 0}
-    real_engine = lambda timeout=4.0: calls.__setitem__("n", calls["n"] + 1) or "0.1.2"  # noqa: E731
+    real_engine = lambda timeout=4.0: calls.__setitem__("n", calls["n"] + 1) or "0.1.3"  # noqa: E731
     monkeypatch.setattr("vi3ion.updates.latest_engine_from_pypi", real_engine)
 
     check(S(), force=True)
@@ -115,11 +115,11 @@ def test_check_offline_keeps_last_known(tmp_path, monkeypatch):
     # First run online.
     monkeypatch.setattr(
         "vi3ion.updates.latest_engine_from_pypi",
-        lambda timeout=4.0: "0.1.2",
+        lambda timeout=4.0: "0.1.3",
     )
     monkeypatch.setattr(
         "vi3ion.updates.latest_plugin_from_npm",
-        lambda timeout=4.0: "0.1.4",
+        lambda timeout=4.0: "0.1.5",
     )
     check(S(), force=True)
 
@@ -134,7 +134,7 @@ def test_check_offline_keeps_last_known(tmp_path, monkeypatch):
     )
     result = check(S(), force=True)
     assert result["offline"] is True
-    assert result["engine"]["latest"] == "0.1.2"
+    assert result["engine"]["latest"] == "0.1.3"
     assert result["engine"]["update_available"] is True
 
 

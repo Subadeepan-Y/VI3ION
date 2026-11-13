@@ -272,19 +272,60 @@ function findOnPath(name) {
 
 // PLUGIN_DIR and REPO_DIR defined above
 
-// Attachments reach the plugin in two shapes:
+function isImageBuffer(buf) {
+  if (!buf || buf.length < 4) return false;
+  // PNG: 89 50 4E 47
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return true;
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return true;
+  // GIF: GIF8
+  if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) return true;
+  // WEBP: RIFF....WEBP
+  if (
+    buf.length >= 12 &&
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  ) return true;
+  // BMP: 42 4D
+  if (buf[0] === 0x42 && buf[1] === 0x4d) return true;
+  return false;
+}
+
+function imageBufferExt(buf) {
+  if (!buf || buf.length < 4) return "png";
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "png";
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "jpg";
+  if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) return "gif";
+  if (
+    buf.length >= 12 &&
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  ) return "webp";
+  if (buf[0] === 0x42 && buf[1] === 0x4d) return "bmp";
+  return "png";
+}
+
+// Attachments reach the plugin in several shapes:
 //   - prompt hook:  { uri, source?, name? }          (no mime, no bytes)
 //   - message part: { data, mime, source, name }     (mime + bytes present)
-// Everything is resolved through these helpers so both shapes work.
+//   - clipboard:    { data }                         (raw base64 bytes, no mime)
+// Everything is resolved through these helpers so all shapes work.
 function isImageAttachment(file) {
   if (!file) return false;
-  const mime = String(file.mime || "").toLowerCase();
+  const mime = String(file.mime || file.mediaType || "").toLowerCase();
   if (mime.startsWith("image/")) return true;
-  const uri = String(file.uri || attachmentUri(file) || "");
+  const uri = String(file.uri || file.url || file.path || attachmentUri(file) || "");
   if (IMAGE_EXT.test(uri)) return true;
   if (uri.startsWith("data:image/")) return true;
+  const name = String(file.name || file.filename || "");
+  if (IMAGE_EXT.test(name)) return true;
   const source = file.source || {};
   if (source.type === "uri" && IMAGE_EXT.test(String(source.uri || ""))) return true;
+  if (file.type === "image") return true;
+  if (file.data) {
+    const bytes = attachmentBytes(file);
+    if (bytes && isImageBuffer(bytes)) return true;
+  }
   return false;
 }
 
@@ -293,7 +334,10 @@ function attachmentUri(file) {
   if (!file) return "";
   const source = file.source || {};
   if (source.type === "uri" && source.uri) return String(source.uri);
-  return file.uri ? String(file.uri) : "";
+  if (file.uri) return String(file.uri);
+  if (file.url) return String(file.url);
+  if (file.path) return String(file.path);
+  return "";
 }
 
 // Bytes of an attachment: base64 `data`, or a data: URI.
@@ -334,25 +378,36 @@ function attachmentHash(file) {
 // Resolve an attachment to a real file on disk. Inline bytes (clipboard
 // paste) are written to the Vi3ion inbox first.
 async function materializeAttachment(file) {
-  const mime = String(file.mime || "image/png").toLowerCase();
   const bytes = attachmentBytes(file);
   const hash = attachmentHash(file);
 
   if (bytes && bytes.length) {
-    const ext = MIME_EXT[mime] || "png";
-    const name =
-      file.name && /\.[A-Za-z0-9]+$/.test(file.name)
-        ? file.name
-        : `clipboard-${hash}.${ext}`;
-    const target = path.join(INBOX_DIR, `${hash}-${name}`);
+    const mime = String(file.mime || file.mediaType || "").toLowerCase();
+    const detectedExt = imageBufferExt(bytes);
+    const ext = MIME_EXT[mime] || detectedExt || "png";
+    const hasFileName =
+      (file.name && /\.[A-Za-z0-9]+$/.test(file.name)) ||
+      (file.filename && /\.[A-Za-z0-9]+$/.test(file.filename));
+    const name = hasFileName
+      ? (file.name || file.filename)
+      : `clipboard-${hash}.${ext}`;
+    const target = hasFileName
+      ? path.join(INBOX_DIR, `${hash}-${name}`)
+      : path.join(INBOX_DIR, `clipboard-${hash}.${ext}`);
     await mkdir(INBOX_DIR, { recursive: true });
     await writeFile(target, bytes);
     return { path: target, name, hash, bytes: bytes.length };
   }
 
-  const filePath = fileUriToPath(attachmentUri(file));
-  if (filePath) {
-    return { path: filePath, name: path.basename(filePath), hash, bytes: 0 };
+  const uri = attachmentUri(file);
+  const filePath = file.path || fileUriToPath(uri);
+  if (filePath && fs.existsSync(filePath)) {
+    return {
+      path: filePath,
+      name: path.basename(filePath),
+      hash: hash || createHash("sha256").update(filePath).digest("hex").slice(0, 16),
+      bytes: 0,
+    };
   }
   return null;
 }
@@ -387,9 +442,10 @@ function isLocalModel(model) {
   return false;
 }
 
-async function shouldApply(ctx, mode) {
+async function shouldApply(ctx, mode, model) {
   if (mode === "always") return true;
   if (mode === "never") return false;
+  if (model) return !isVisionCapable(model);
   try {
     const def = await resolveModel(ctx);
     return !def || !isVisionCapable(def);
@@ -1264,12 +1320,22 @@ function imagesFromMessages(messages) {
     const candidates = [...files];
     for (const part of parts) {
       if (!part || typeof part !== "object") continue;
-      const type = String(part.type || "");
-      if (type !== "file" && type !== "image") continue;
+      const type = String(part.type || "").toLowerCase();
+      if (type && type !== "file" && type !== "image" && type !== "image_url") continue;
+      const rawData =
+        part.data ||
+        (part.image_url && typeof part.image_url.url === "string"
+          ? part.image_url.url
+          : undefined);
       candidates.push({
         mime: part.mime || part.mediaType || "",
-        data: part.data,
+        data: rawData,
         name: part.filename || part.name,
+        uri:
+          part.url ||
+          (part.image_url && typeof part.image_url.url === "string"
+            ? part.image_url.url
+            : undefined),
         source: part.url
           ? { type: "uri", uri: String(part.url) }
           : { type: "inline" },
@@ -1493,7 +1559,7 @@ async function handleRequestHook(ctx, event, hookName, options, mode) {
 
   // Image analysis. The attachment (mime + bytes) only exists on the message,
   // so this is where images are found and measured.
-  if (hookName === "context" && (await shouldApply(ctx, mode))) {
+  if (hookName === "context" && (await shouldApply(ctx, mode, model))) {
     const result = await analyseMessageImages(ctx, event, model, vision, options);
     if (result && result.blocks.length) {
       for (const block of result.blocks) {

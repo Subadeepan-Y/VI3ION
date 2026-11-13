@@ -186,12 +186,22 @@ def join_same_row(sections: dict[str, list[TextItem]]) -> dict[str, list[TextIte
         items = sections[region]
         row_items: dict[int, list[TextItem]] = {}
         for item in sorted(items, key=lambda i: (i.bbox[1], i.bbox[0])):
+            item_h = item.bbox[3] - item.bbox[1]
+            item_w = item.bbox[2] - item.bbox[0]
+            if item_h > 1.8 * item_w and item_h > 25:
+                row_items.setdefault(len(row_items), []).append(item)
+                continue
             placed = False
             for row in row_items.values():
                 r0 = min(i.bbox[1] for i in row)
                 r1 = max(i.bbox[3] for i in row)
+                r_h = r1 - r0
+                if r_h <= 0 or item_h <= 0:
+                    continue
+                if min(item_h, r_h) / max(item_h, r_h) < 0.4:
+                    continue
                 overlap = min(item.bbox[3], r1) - max(item.bbox[1], r0)
-                if overlap > 0.5 * min(item.bbox[3] - item.bbox[1], r1 - r0):
+                if overlap > 0.5 * min(item_h, r_h):
                     row.append(item)
                     placed = True
                     break
@@ -226,10 +236,15 @@ def join_same_row(sections: dict[str, list[TextItem]]) -> dict[str, list[TextIte
                     if item.confidence > current.confidence:
                         current = item
                     continue
-                if gap < height:
+                if 0 <= gap < max(height, 12):
                     current = TextItem(
                         value=f"{current.value} {item.value}",
-                        bbox=(current.bbox[0], current.bbox[1], item.bbox[2], item.bbox[3]),
+                        bbox=(
+                            min(current.bbox[0], item.bbox[0]),
+                            min(current.bbox[1], item.bbox[1]),
+                            max(current.bbox[2], item.bbox[2]),
+                            max(current.bbox[3], item.bbox[3]),
+                        ),
                         confidence=min(current.confidence, item.confidence),
                         region=region,
                         uncertain=current.uncertain or item.uncertain,

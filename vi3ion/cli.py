@@ -48,14 +48,18 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     if not raw:
         print("error: a path or image id is required", file=sys.stderr)
         return 2
-    path = Path(raw).expanduser()
-    if not settings.is_path_allowed(path):
-        print(
-            f"error: path {path} is outside allowed roots "
-            f"{[str(r) for r in settings.allowed_roots]}",
-            file=sys.stderr,
-        )
-        return 2
+    is_clipboard = raw.strip().lower() in ("clipboard", ":clipboard:", "@clipboard", "clip")
+    if not is_clipboard and not raw.startswith("vi3ion://"):
+        path = Path(raw).expanduser()
+        if not settings.is_path_allowed(path):
+            print(
+                f"error: path {path} is outside allowed roots "
+                f"{[str(r) for r in settings.allowed_roots]}",
+                file=sys.stderr,
+            )
+            return 2
+    else:
+        path = raw if is_clipboard else Path(raw).expanduser()
     try:
         engine = _engine()
         if raw.startswith("vi3ion://"):
@@ -80,10 +84,16 @@ def cmd_analyze(args: argparse.Namespace) -> int:
 def cmd_brief(args: argparse.Namespace) -> int:
     from vi3ion.brief import make_brief
 
-    path = Path(args.path).expanduser()
-    if not path.exists():
-        print(f"error: image not found: {path}", file=sys.stderr)
-        return 2
+    raw = str(args.path).strip()
+    if raw.lower() in ("clipboard", ":clipboard:", "@clipboard", "clip"):
+        engine = _engine()
+        rec, _ = engine.loader.ingest_clipboard()
+        path = Path(rec["original_path"])
+    else:
+        path = Path(raw).expanduser()
+        if not path.exists():
+            print(f"error: image not found: {path}", file=sys.stderr)
+            return 2
     budget = int(getattr(args, "budget", 0) or 0)
     result = make_brief(path, budget_tokens=budget)
     if args.json:

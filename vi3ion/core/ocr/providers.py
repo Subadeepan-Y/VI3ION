@@ -54,7 +54,20 @@ class RapidOCRProvider(OCRProvider):
 
     def recognize(self, bgr: np.ndarray) -> list[OCRLine]:
         engine = self._get_engine()
-        raw, _elapsed = engine(bgr)
+        target = bgr
+        if bgr is not None and bgr.size > 0:
+            import cv2
+
+            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+            mean = float(np.mean(gray))
+            std = float(np.std(gray))
+            if mean < 60.0 or std < 45.0:
+                lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
+                l_chan, a_chan, b_chan = cv2.split(lab)
+                clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+                boosted_l = clahe.apply(l_chan)
+                target = cv2.cvtColor(cv2.merge([boosted_l, a_chan, b_chan]), cv2.COLOR_LAB2BGR)
+        raw, _elapsed = engine(target)
         lines: list[OCRLine] = []
         if not raw:
             return lines

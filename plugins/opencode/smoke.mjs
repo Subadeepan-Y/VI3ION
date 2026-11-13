@@ -265,6 +265,24 @@ assert.ok(onRequest.includes("vi3ion-auto"), "re-enabled: evidence block missing
   assert.ok(request.includes("Save"), "clipboard: OCR text missing");
 }
 
+// --- 6b. raw clipboard (base64 data only, no mime/name/source, as sent by OpenCode) ---
+{
+  const rawClipCtx = makeCtx({ providerID: "inception", id: "mercury-3" });
+  await plugin.setup(rawClipCtx);
+  const rawClipMsg = {
+    role: "user",
+    text: "look at this clipboard image",
+    files: [{ data: fs.readFileSync(IMG).toString("base64") }],
+  };
+  const request = await runContext(rawClipCtx, { messages: [rawClipMsg], sessionID: "ses_raw_clip" });
+  assert.ok(request.includes("vi3ion-auto"), "raw clipboard: inline base64 image without mime not analysed");
+  assert.ok(request.includes("Save"), "raw clipboard: OCR text missing");
+  const { createHash } = await import("node:crypto");
+  const expectedHash = createHash("sha256").update(fs.readFileSync(IMG)).digest("hex").slice(0, 16);
+  const expectedClipPath = path.join(SMOKE_DATA, "inbox", `clipboard-${expectedHash}.png`);
+  assert.ok(fs.existsSync(expectedClipPath), `raw clipboard: expected file ${expectedClipPath} not found`);
+}
+
 // --- 7. version diff formatting (no subprocess needed) ---
 {
   const sampleDiff = {

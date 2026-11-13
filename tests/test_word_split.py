@@ -37,6 +37,13 @@ def test_respect_run_rebuilds_fused_alpha_runs():
     )
 
 
+def test_respect_run_recovers_italic_ocr_confusions():
+    assert _respect_run("repZacethiswiththe") == "replace this with the"
+    assert _respect_run("ZikerepZacethiswiththe") == "Like replace this with the"
+    assert _respect_run("zihe") == "like"
+    assert _respect_run("lihereplace") == "like replace"
+
+
 def test_full_line_alternative_replaces_leading_digit_junk():
     row = item("84 DUEL DECK 雨極殿")
     _merge_full_line_alternative(row, 4)
