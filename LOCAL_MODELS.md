@@ -1,12 +1,31 @@
-# Running Vi3ion with local models
+# VI3ION on local models (the whole point)
 
-Vi3ion is the perception layer for agents. When the agent's model is local
-(Ollama, llama.cpp, LM Studio, vLLM, Unsloth, SGLang, LocalAI, jan,
-koboldcpp, text-generation-webui), Vi3ion has three jobs:
+Most vision tools assume you have a powerful GPU. VI3ION assumes the opposite.
+It was built for people running small local models on ordinary hardware — a
+laptop with 8 GB of RAM, a mini PC, an old desktop — where a vision model is
+simply not an option.
 
-1. Be the **eyes** for models that cannot read pixels.
-2. Stay **out of the way** for local vision models that can.
-3. Stay **cheap**: low RAM, low CPU, small token footprint.
+**You do not need a vision model.** VI3ION reads the screenshot on your CPU and
+hands your text-only model a short, measured description. The model stays fast
+and private; VI3ION does the looking. If you do have a vision model, VI3ION
+quietly steps back and acts as a second opinion instead.
+
+Works with Ollama, llama.cpp, LM Studio, vLLM, Unsloth, SGLang, LocalAI, jan,
+koboldcpp and text-generation-webui.
+
+## Quick start on modest hardware
+
+```bash
+pip install vi3ion
+vi3ion doctor          # checks OCR, RAM tier and local runtimes
+vi3ion local           # which local models are running, and can they see?
+```
+
+If your machine has less than 8 GB of RAM, VI3ION switches to its small profile
+automatically: smaller images, a lighter recognizer, and a short evidence
+brief. To force it on any machine, set `VI3ION_LOW_RESOURCE=1`. To shorten the
+brief further, use `/vi3ionbudget 300` in OpenCode or
+`vi3ion brief image.png --budget 300`.
 
 ## 1. See what is running
 

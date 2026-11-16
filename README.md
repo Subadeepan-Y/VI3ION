@@ -17,6 +17,12 @@ screenshot.
 One `pip install`, one small config block. No cloud, no API key, no image
 ever leaves your machine.
 
+**Made for modest hardware.** Have an older laptop, no GPU, or 8 GB of RAM?
+You cannot run a vision model — that is exactly who this is for. VI3ION does
+the looking on your CPU and tells your text-only local model what it found in
+a few hundred tokens. Bigger machines can still use VI3ION as a second opinion.
+See [LOCAL_MODELS.md](LOCAL_MODELS.md).
+
 ---
 
 ## Install (about a minute)
@@ -396,7 +402,13 @@ VI3ION_SEMANTIC_PROVIDER=florence,owlvit,clip vi3ion analyze shot.png
 npm --prefix dashboard install
 npm --prefix dashboard run build     # TS + Vite; dist/ mounts at server root
 pytest                                # full suite
+vi3ion score --all                    # fidelity on every bundled fixture
+python scripts/stress_images.py "<folder>"   # sample a real screenshot folder
 ```
+
+The stress script measures real folders without uploading anything. It samples
+across the folder, adds the smallest and largest files, and reports failures,
+slow analyses and images with no detected text. Use `--all` for a full pass.
 
 The dashboard proxies `/api` to the server and is only mounted when
 `dashboard/dist` exists.

@@ -1,0 +1,10 @@
+{
+  "_meta": {
+    "image": "text_card.png",
+    "source": "placehold.co/600x400 with text=VI3ION+TEST (text known from the URL)",
+    "note": "Ground truth from the generator parameters, not from OCR."
+  },
+  "text": [
+    { "value": "VI3ION TEST", "region": "left_column" }
+  ]
+}

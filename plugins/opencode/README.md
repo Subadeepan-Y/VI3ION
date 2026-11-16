@@ -9,6 +9,10 @@ This package is the optional **OpenCode plugin** for
 paste, tells the agent it has eyes, and re-binds when you switch models
 mid-chat.
 
+**Built for modest hardware.** Running a small local model without vision? This
+is the main use case: VI3ION becomes the model's eyes and keeps the evidence
+short enough for a small context window. Nothing is uploaded.
+
 ## Install
 
 ```bash

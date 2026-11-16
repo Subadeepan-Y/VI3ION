@@ -40,10 +40,15 @@ MINIMAL = (
 
 
 def test_hedged_alternatives_do_not_lower_precision():
-    # A hedge is attached to the asserted value, as the brief renders it.
+    # A hedged reading is still a recall candidate, but it is not a confident
+    # assertion that should be charged against precision.
     hedged = MINIMAL.replace('"REAL"', '"REAL" (possibly "GARBLED", uncertain)', 1)
-    plain = review(MINIMAL, {"text": [{"value": "REAL", "region": "top_bar"}]})
-    assert review(hedged, {"text": [{"value": "REAL", "region": "top_bar"}]}).precision == plain.precision == 1.0
+    expected = {"text": [{"value": "REAL", "region": "top_bar"}]}
+    plain = review(MINIMAL, expected)
+    scored = review(hedged, expected)
+    assert plain.precision == 1.0
+    assert scored.recall == 1.0  # the hedge still helps recall
+    assert scored.spurious == []  # but it is not scored as a wrong claim
 
 
 def test_number_not_read_annotation_does_not_pollute_value():

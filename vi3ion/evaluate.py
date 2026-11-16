@@ -200,6 +200,11 @@ def parse_assertions(text: str) -> list[tuple[str, str | None]]:
         for piece in body.split("; "):
             if piece.strip().startswith("("):
                 continue  # a standalone annotation, not an asserted value
+            # Anything the brief itself flags as uncertain — including a
+            # `(possibly "X", uncertain)` alternative — is a hedge, not a
+            # confident claim. Keep it for recall, not for precision.
+            if " (uncertain" in piece or " (possibly " in piece:
+                continue
             value = _value_of(piece)
             if value:
                 labelled.append((value, region))
@@ -266,6 +271,16 @@ def review(brief_text: str, expected: dict) -> FidelityReport:
         uncertain_units=len(all_units) - len(units),
     )
     if not units:
+        # A photo with no text has nothing to recall or misquote. Structure
+        # still matters, so keep scoring instead of returning a zero report.
+        checks = _structure_checks(brief_text)
+        report.structure_checks = checks
+        report.structure = sum(1 for ok in checks.values() if ok) / len(checks)
+        report.recall = report.precision = report.regions = 1.0
+        report.overall = (
+            WEIGHTS["recall"] + WEIGHTS["precision"]
+            + WEIGHTS["regions"] + WEIGHTS["structure"] * report.structure
+        )
         return report
 
     quoted = parse_brief(brief_text)
@@ -321,7 +336,9 @@ def review(brief_text: str, expected: dict) -> FidelityReport:
             correct += 1
         else:
             report.spurious.append(value)
-    report.precision = correct / len(asserted) if asserted else 0.0
+    # No confident claims means nothing was misquoted. Treat as neutral, not
+    # as a precision failure (the hedged readings still count for recall).
+    report.precision = correct / len(asserted) if asserted else 1.0
 
     report.regions = region_hits / region_checked if region_checked else 0.0
     checks = _structure_checks(brief_text)
