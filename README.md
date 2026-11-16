@@ -412,3 +412,7 @@ slow analyses and images with no detected text. Use `--all` for a full pass.
 
 The dashboard proxies `/api` to the server and is only mounted when
 `dashboard/dist` exists.
+
+## Stress test on real screenshots
+
+Measured on `698` screenshots from one real folder (1971s total, 6594ms and 396 tokens per image on this PC). Failures: 6 (tiny or corrupt images, now rejected with a clear message). Full data: `docs/full-analysis-report.json` and `docs/full-analysis-progress.jsonl`.
