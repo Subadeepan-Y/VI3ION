@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import threading
 from dataclasses import dataclass, field
@@ -61,7 +62,10 @@ class RapidOCRProvider(OCRProvider):
             gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
             mean = float(np.mean(gray))
             std = float(np.std(gray))
-            if mean < 60.0 or std < 45.0:
+            # Opt-in: CLAHE lowered measured fidelity on low-contrast UI shots
+            # (the global contrast lift hurts text that is already readable).
+            # Kept available for unusually dark scans via VI3ION_OCR_CLAHE=1.
+            if os.environ.get("VI3ION_OCR_CLAHE", "") == "1":
                 lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
                 l_chan, a_chan, b_chan = cv2.split(lab)
                 clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))

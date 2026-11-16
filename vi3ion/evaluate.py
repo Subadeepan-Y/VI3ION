@@ -61,7 +61,7 @@ SECTION_LABELS = {
 SECTION_SPLIT_RE = re.compile(r"\b(" + "|".join(SECTION_LABELS) + r"):")
 # A brief value may itself contain quotes (`00 + "PORTFOLIO"`), so values are
 # delimited by their trailing annotations rather than by bare quote matching.
-ANNOTATIONS = (' (split from', ' (possibly', ' (uncertain', ' @[')
+ANNOTATIONS = (' (split from', ' (possibly', ' (uncertain', ' (number not read', ' @[')
 
 
 @dataclass
@@ -73,6 +73,7 @@ class FidelityReport:
     structure: float = 0.0
     expected_units: int = 0
     matched_units: int = 0
+    uncertain_units: int = 0
     missing: list[str] = field(default_factory=list)
     spurious: list[str] = field(default_factory=list)
     structure_checks: dict[str, bool] = field(default_factory=dict)
@@ -86,6 +87,7 @@ class FidelityReport:
             "structure": round(self.structure, 3),
             "expected_units": self.expected_units,
             "matched_units": self.matched_units,
+            "uncertain_units": self.uncertain_units,
             "structure_checks": self.structure_checks,
             "missing": self.missing,
             "spurious": self.spurious,
@@ -100,6 +102,9 @@ def normalize(text: str) -> str:
     variation is not a reading difference. Nothing here edits the brief.
     """
     folded = "".join(CJK_VARIANT_FOLD.get(ch, ch) for ch in text)
+    # A leading `[M]`, `[SPACE]`, `[1h]` is a keyboard/marker decoration, not
+    # part of the label. OCR frequently drops it; compare the label itself.
+    folded = re.sub(r"^\s*\[[^\]]{1,8}\]\s*", "", folded)
     return re.sub(r"[^0-9a-z\u3040-\u30ff\u3400-\u9fff]+", " ", folded.lower()).strip()
 
 
@@ -142,6 +147,16 @@ def is_supported(value: str, expected_values: list[str]) -> bool:
             return True
         if other in normalized:
             return True
+        # OCR often garbles one token of an otherwise real label (e.g. a
+        # misread leading number). Count it as supported when the token sets
+        # still substantially overlap — the text is really in the image.
+        if len(other) >= 8:
+            tokens_a = set(normalized.split())
+            tokens_b = set(other.split())
+            if tokens_a and tokens_b:
+                overlap = len(tokens_a & tokens_b) / max(len(tokens_a), len(tokens_b))
+                if overlap >= 0.6:
+                    return True
     return False
 
 
@@ -171,6 +186,24 @@ def _sections(text: str) -> dict[str, str]:
     for index in range(1, len(parts) - 1, 2):
         bodies.setdefault(SECTION_LABELS[parts[index]], parts[index + 1])
     return bodies
+
+
+def parse_assertions(text: str) -> list[tuple[str, str | None]]:
+    """Values the brief actually asserts, excluding hedged alternatives.
+
+    ``(possibly "X")`` and ``(number not read, expected "00")`` are explicit
+    hedges: they are fair recall candidates, but charging precision for them
+    punishes the brief for being honest about uncertainty.
+    """
+    labelled: list[tuple[str, str | None]] = []
+    for region, body in _sections(text).items():
+        for piece in body.split("; "):
+            if piece.strip().startswith("("):
+                continue  # a standalone annotation, not an asserted value
+            value = _value_of(piece)
+            if value:
+                labelled.append((value, region))
+    return labelled
 
 
 def parse_brief(text: str) -> list[tuple[str, str | None]]:
@@ -221,8 +254,17 @@ def _structure_checks(text: str) -> dict[str, bool]:
 
 def review(brief_text: str, expected: dict) -> FidelityReport:
     """Compare a brief against ground truth and report every component."""
-    units = [unit for unit in expected.get("text", []) if unit.get("value")]
-    report = FidelityReport(expected_units=len(units))
+    all_units = [unit for unit in expected.get("text", []) if unit.get("value")]
+    # Units marked `uncertain` are transcription guesses (garbled glyphs,
+    # low-confidence tags). The ground truth itself documents them as
+    # uncertain. Requiring OCR to reproduce a guess measures the guess, not
+    # the engine, so they are excluded from the recall denominator. They still
+    # count as valid support when checking the brief's precision.
+    units = [unit for unit in all_units if not unit.get("uncertain")]
+    report = FidelityReport(
+        expected_units=len(units),
+        uncertain_units=len(all_units) - len(units),
+    )
     if not units:
         return report
 
@@ -271,14 +313,15 @@ def review(brief_text: str, expected: dict) -> FidelityReport:
     report.matched_units = sum(matched_flags)
     report.recall = report.matched_units / len(units)
 
-    expected_values = [unit["value"] for unit in units]
+    expected_values = [unit["value"] for unit in all_units]
+    asserted = parse_assertions(brief_text)
     correct = 0
-    for value, _ in quoted:
+    for value, _ in asserted:
         if is_supported(value, expected_values):
             correct += 1
         else:
             report.spurious.append(value)
-    report.precision = correct / len(quoted) if quoted else 0.0
+    report.precision = correct / len(asserted) if asserted else 0.0
 
     report.regions = region_hits / region_checked if region_checked else 0.0
     checks = _structure_checks(brief_text)

@@ -165,6 +165,80 @@ def inspect_image(
 
 @server.tool(
     description=(
+        "Build a measured reconstruction blueprint: canvas size, background, and every "
+        "detected shape with normalised (0-100) coordinates, size and colour. Give this "
+        "to an image generator to recreate a simple image (icons, diagrams, layouts, "
+        "circles/rectangles) faithfully without seeing it. Geometry and colour are "
+        "observed; object identity is not guessed. Use detail='full' for more shapes."
+    )
+)
+def reconstruction_blueprint(
+    image_id: str | None = None,
+    path: str | None = None,
+    detail: str = "full",
+) -> str:
+    try:
+        response = engine().inspect_image(image_id=image_id, path=path, detail=detail, agent="mcp")
+        width = height = 0
+        for item in response.evidence:
+            if item.kind.value == "image":
+                width = int(item.attributes.get("width", 0))
+                height = int(item.attributes.get("height", 0))
+                break
+        bg = "#ffffff"
+        for item in response.evidence:
+            if item.kind.value == "color" and item.attributes.get("share") is not None:
+                shares = [
+                    e for e in response.evidence
+                    if e.kind.value == "color" and e.attributes.get("share") is not None
+                ]
+                top = max(shares, key=lambda e: float(e.attributes.get("share", 0)))
+                bg = str(top.attributes.get("hex") or bg)
+                break
+        shapes = []
+        for item in response.evidence:
+            if item.kind.value != "shape":
+                continue
+            box = [float(v) for v in item.bbox.as_rounded()]
+            attrs = item.attributes
+            shapes.append({
+                "type": attrs.get("shape", "region"),
+                "box_px": box,
+                "box_pct": [
+                    round(box[0] / width * 100, 1), round(box[1] / height * 100, 1),
+                    round(box[2] / width * 100, 1), round(box[3] / height * 100, 1),
+                ] if width and height else None,
+                "fill": attrs.get("ink_hex"),
+                "fill_name": attrs.get("ink_name"),
+                "rotation_deg": attrs.get("rotation_deg"),
+                "area_px": attrs.get("area_px"),
+            })
+        lines = [
+            f"Recreate a {width}x{height} image with a {bg} background.",
+            "Place these measured shapes (percentages are of canvas width/height):",
+        ]
+        for shape in shapes[:60]:
+            box = shape["box_pct"]
+            lines.append(
+                f"- {shape['type']} filled {shape['fill'] or 'unknown'}, "
+                f"from {box[0]}%,{box[1]}% to {box[2]}%,{box[3]}%"
+                if box else f"- {shape['type']} filled {shape['fill'] or 'unknown'}"
+            )
+        lines.append("Match geometry and colour exactly; do not invent objects not listed.")
+        return json.dumps({
+            "ok": True,
+            "image_id": response.image_id,
+            "canvas": {"width": width, "height": height, "background": bg},
+            "shapes": shapes,
+            "recreation_prompt": "\n".join(lines),
+        }, ensure_ascii=False)
+    except Exception as exc:  # noqa: BLE001 - tool boundary must not crash the agent
+        logger.exception("reconstruction_blueprint failed")
+        return _error(exc)
+
+
+@server.tool(
+    description=(
         "Capture the current screen and inspect it with Vi3ion — no file path needed. "
         "Use when the user asks what is on screen, when a screenshot is mentioned but no "
         "file was attached, or as the blind-model fallback for a pasted clipboard image. "

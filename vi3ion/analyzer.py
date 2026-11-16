@@ -187,8 +187,6 @@ def _is_body_text(item: TextItem) -> bool:
         return False
     if re.match(r"^\d{1,3}\b", item.value.strip()):
         return False
-    if _CODE_OR_SYNTAX_RE.search(item.value):
-        return False
     if any(ch.islower() for ch in item.value):
         return True
     return False

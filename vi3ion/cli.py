@@ -81,6 +81,18 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_blueprint(args: argparse.Namespace) -> int:
+    """Print a measured reconstruction blueprint for an image."""
+    from vi3ion.mcp_server import reconstruction_blueprint
+
+    raw = reconstruction_blueprint(path=args.path, detail=args.detail)
+    print(raw)
+    try:
+        return 0 if json.loads(raw).get("ok") else 1
+    except Exception:  # noqa: BLE001
+        return 0
+
+
 def cmd_screenshot(args: argparse.Namespace) -> int:
     """Capture the current screen and analyse it locally (no file path needed)."""
     from vi3ion.mcp_server import screenshot as capture
@@ -1140,6 +1152,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="label to attach to the image in the image memory (e.g. 'dashboard v1')",
     )
     analyze.set_defaults(func=cmd_analyze)
+
+    blueprint = sub.add_parser(
+        "blueprint",
+        help="measured reconstruction spec (canvas, shapes, colours) for an image generator",
+    )
+    blueprint.add_argument("path", help="path to an image")
+    blueprint.add_argument("--detail", default="full", choices=["compact", "standard", "full"])
+    blueprint.set_defaults(func=cmd_blueprint)
 
     screenshot = sub.add_parser(
         "screenshot",

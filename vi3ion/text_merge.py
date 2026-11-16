@@ -236,7 +236,7 @@ def join_same_row(sections: dict[str, list[TextItem]]) -> dict[str, list[TextIte
                     if item.confidence > current.confidence:
                         current = item
                     continue
-                if 0 <= gap < max(height, 12):
+                if gap < height:
                     current = TextItem(
                         value=f"{current.value} {item.value}",
                         bbox=(

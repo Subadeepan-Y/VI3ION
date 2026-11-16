@@ -19,6 +19,7 @@ def test_tools_registered():
     assert tool_names == {
         "inspect_image",
         "screenshot",
+        "reconstruction_blueprint",
         "inspect_region",
         "query_evidence",
         "verify_claim",
