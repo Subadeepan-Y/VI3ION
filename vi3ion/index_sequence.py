@@ -40,7 +40,13 @@ def _index_model(
     values = np.array([value for _, value in anchors], dtype=float)
     if float(ys.max() - ys.min()) <= 0:
         return None
-    pitch, base_y = np.polyfit(values, ys, 1)
+    try:
+        pitch, base_y = np.polyfit(values, ys, 1)
+    except (np.linalg.LinAlgError, ValueError):
+        # Degenerate index columns (all anchors on one line, duplicate values)
+        # can make the least-squares fit fail. Skip the correction for this
+        # region only - one odd screenshot must never abort the whole brief.
+        return None
     if not np.isfinite(pitch) or pitch <= 0:
         return None
     all_ys = sorted(entry[2] for entry in entries)

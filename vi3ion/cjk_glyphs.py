@@ -35,8 +35,16 @@ logger = logging.getLogger("vi3ion.analyzer")
 
 STRIP_X0 = 1805        # left edge of the re-read strip (reaches into the label)
 MARGIN_X0 = 1825       # left edge of the subtitle zone proper
-FULL_SCALES = (2, 3, 4, 6, 8)
-CONTEXT_SCALES = (2, 3)
+# Two scales are enough for a faint margin glyph; the old 2/3/4/6/8 ladder
+# cost minutes on dense screenshots. Opt into the full ladder when needed.
+import os as _os
+
+if _os.environ.get("VI3ION_CJK_SCALES", "") == "full":
+    FULL_SCALES = (2, 3, 4, 6, 8)
+    CONTEXT_SCALES = (2, 3)
+else:
+    FULL_SCALES = (2, 3)
+    CONTEXT_SCALES = (2,)
 FULL_CONF = 0.45
 CELL_CONF = 0.20
 # A per-cell reading is accepted when at least one cell carries strong
