@@ -173,9 +173,17 @@ def spatial_layout(sections: dict[str, list], width: int, height: int) -> str:
 def make_brief(image_path: str | Path, budget_tokens: int = 0) -> BriefResult:
     started = time.perf_counter()
     analysis = analyze_image(image_path)
-    bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+    try:
+        bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+    except cv2.error as exc:  # truncated files raise inside OpenCV
+        raise ValueError(f"could not decode image {image_path}: {exc}") from exc
     if bgr is None:
         raise ValueError(f"could not decode image: {image_path}")
+    if min(bgr.shape[:2]) < 16:
+        raise ValueError(
+            f"image too small to analyse ({bgr.shape[1]}x{bgr.shape[0]}); "
+            "need at least 16x16 pixels"
+        )
 
     sections: list[tuple[str, str]] = []
     sections.append(

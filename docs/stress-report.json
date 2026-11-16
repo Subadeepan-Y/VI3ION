@@ -1,0 +1,325 @@
+{
+  "sample_size": 23,
+  "failures": [
+    {
+      "file": "Screenshot 2026-08-22 134536.png",
+      "size_kb": 0,
+      "ms": 1039,
+      "error": "error: Unknown C++ exception from OpenCV code"
+    },
+    {
+      "file": "Screenshot 2026-10-28 210359.png",
+      "size_kb": 0,
+      "ms": 270,
+      "error": "error: Unknown C++ exception from OpenCV code"
+    },
+    {
+      "file": "Screenshot 2026-11-13 192337.png",
+      "size_kb": 0,
+      "ms": 97,
+      "error": "error: Unknown C++ exception from OpenCV code"
+    }
+  ],
+  "slowest": [
+    {
+      "file": "Screenshot 2026-11-15 110752.png",
+      "size_kb": 414,
+      "ms": 104076,
+      "tokens": 786,
+      "chars": 5655,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-10-31 212904.png",
+      "size_kb": 2050,
+      "ms": 96973,
+      "tokens": 825,
+      "chars": 5735,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-29 192121.png",
+      "size_kb": 173,
+      "ms": 91368,
+      "tokens": 852,
+      "chars": 8466,
+      "has_text": true,
+      "has_shapes": false,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-05 213212.png",
+      "size_kb": 71,
+      "ms": 77898,
+      "tokens": 651,
+      "chars": 4555,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-10-28 180808.png",
+      "size_kb": 3107,
+      "ms": 53816,
+      "tokens": 590,
+      "chars": 4013,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    }
+  ],
+  "no_text": [
+    "Screenshot 2026-09-06 170211.png",
+    "Screenshot 2026-09-19 195530.png",
+    "Screenshot 2026-09-30 174432.png"
+  ],
+  "rows": [
+    {
+      "file": "Screenshot 2026-08-22 134536.png",
+      "size_kb": 0,
+      "ms": 1039,
+      "error": "error: Unknown C++ exception from OpenCV code"
+    },
+    {
+      "file": "Screenshot 2026-08-22 134540.png",
+      "size_kb": 93,
+      "ms": 12550,
+      "tokens": 405,
+      "chars": 2597,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-08-23 195122.png",
+      "size_kb": 104,
+      "ms": 4684,
+      "tokens": 344,
+      "chars": 2088,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-08-24 220416.png",
+      "size_kb": 4,
+      "ms": 1004,
+      "tokens": 203,
+      "chars": 1217,
+      "has_text": true,
+      "has_shapes": false,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-03 225117.png",
+      "size_kb": 59,
+      "ms": 4702,
+      "tokens": 458,
+      "chars": 2853,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-05 213212.png",
+      "size_kb": 71,
+      "ms": 77898,
+      "tokens": 651,
+      "chars": 4555,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-06 150202.png",
+      "size_kb": 522,
+      "ms": 6402,
+      "tokens": 536,
+      "chars": 3693,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-06 170211.png",
+      "size_kb": 15,
+      "ms": 654,
+      "tokens": 254,
+      "chars": 1440,
+      "has_text": false,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-19 195530.png",
+      "size_kb": 42,
+      "ms": 2752,
+      "tokens": 168,
+      "chars": 924,
+      "has_text": false,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-29 171621.png",
+      "size_kb": 42,
+      "ms": 4831,
+      "tokens": 373,
+      "chars": 2285,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-29 173744.png",
+      "size_kb": 8,
+      "ms": 2899,
+      "tokens": 282,
+      "chars": 1701,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-29 192121.png",
+      "size_kb": 173,
+      "ms": 91368,
+      "tokens": 852,
+      "chars": 8466,
+      "has_text": true,
+      "has_shapes": false,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-09-30 174432.png",
+      "size_kb": 192,
+      "ms": 5023,
+      "tokens": 202,
+      "chars": 1091,
+      "has_text": false,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-10-02 104752.png",
+      "size_kb": 11,
+      "ms": 4822,
+      "tokens": 335,
+      "chars": 2202,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-10-16 211954.png",
+      "size_kb": 68,
+      "ms": 12526,
+      "tokens": 518,
+      "chars": 3578,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-10-27 214551.png",
+      "size_kb": 2985,
+      "ms": 6546,
+      "tokens": 477,
+      "chars": 3080,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-10-28 180727.png",
+      "size_kb": 3734,
+      "ms": 9663,
+      "tokens": 465,
+      "chars": 3017,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-10-28 180808.png",
+      "size_kb": 3107,
+      "ms": 53816,
+      "tokens": 590,
+      "chars": 4013,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-10-28 210359.png",
+      "size_kb": 0,
+      "ms": 270,
+      "error": "error: Unknown C++ exception from OpenCV code"
+    },
+    {
+      "file": "Screenshot 2026-10-31 212904.png",
+      "size_kb": 2050,
+      "ms": 96973,
+      "tokens": 825,
+      "chars": 5735,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-11-07 192346.png",
+      "size_kb": 676,
+      "ms": 29598,
+      "tokens": 718,
+      "chars": 5183,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    },
+    {
+      "file": "Screenshot 2026-11-13 192337.png",
+      "size_kb": 0,
+      "ms": 97,
+      "error": "error: Unknown C++ exception from OpenCV code"
+    },
+    {
+      "file": "Screenshot 2026-11-15 110752.png",
+      "size_kb": 414,
+      "ms": 104076,
+      "tokens": 786,
+      "chars": 5655,
+      "has_text": true,
+      "has_shapes": true,
+      "truncated": false,
+      "error": null
+    }
+  ]
+}

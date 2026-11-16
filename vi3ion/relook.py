@@ -225,7 +225,12 @@ def contrast_items(bgr: np.ndarray, known: list[TextItem], path: Path) -> list[T
 
 
 def small_text_items(bgr: np.ndarray, known: list[TextItem], path: Path) -> list[TextItem]:
-    """Re-read the small-text bands at 2x and keep lines not already covered."""
+    """Re-read the small-text bands at 2x and keep lines not already covered.
+
+    Upscaling is capped at a 1600 px side: on a 4K screenshot a 3x footer crop
+    used to take tens of seconds in the OCR detector without adding readings.
+    Small screenshots are unaffected, so ordinary fidelity is unchanged.
+    """
     height, width = bgr.shape[:2]
     added: list[TextItem] = []
     for name, (fx0, fy0, fx1, fy1), scale in SMALL_TEXT_BANDS:
@@ -234,6 +239,9 @@ def small_text_items(bgr: np.ndarray, known: list[TextItem], path: Path) -> list
         crop = bgr[y0:y1, x0:x1]
         if crop.size == 0:
             continue
+        longest = max(crop.shape[:2])
+        if longest:
+            scale = max(1.0, min(scale, 1600 / longest))
         big = cv2.resize(
             crop, None, fx=scale, fy=scale,
             interpolation=cv2.INTER_CUBIC,

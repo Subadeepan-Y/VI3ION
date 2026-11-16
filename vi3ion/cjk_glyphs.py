@@ -84,6 +84,9 @@ def _read_stream(provider, crop: np.ndarray, scale: int, min_conf: float):
     """Yield (text, confidence) from one up-scaled crop."""
     if crop.size == 0:
         return
+    # Never upscale a crop past 512 px on a side: at 6-16x a wide right-margin
+    # strip becomes enormous and the detector dominates runtime for no gain.
+    scale = max(1.0, min(scale, 512 / max(crop.shape[:2])))
     big = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
     for line in provider.recognize(big):
         text = line.text.strip()
@@ -155,6 +158,10 @@ def _japan_cell_reads(
         best: tuple[float, str] | None = None
         for pad in (0, 2, 4):
             for scale in (6, 8, 12, 16):
+                # Once an anchor is confident, more scales/pads only burn CPU:
+                # on dense screenshots this pass used to take over a minute.
+                if best is not None and best[0] >= CELL_ANCHOR_CONF:
+                    break
                 crop = bgr[max(0, y0 - pad):y1 + pad, max(0, x0 - pad):x1 + pad]
                 if crop.size == 0:
                     continue
@@ -200,6 +207,10 @@ def _cell_reads(
         best: tuple[float, str] | None = None
         for pad in (0, 2, 4):
             for scale in (6, 8, 12, 16):
+                # Once an anchor is confident, more scales/pads only burn CPU:
+                # on dense screenshots this pass used to take over a minute.
+                if best is not None and best[0] >= CELL_ANCHOR_CONF:
+                    break
                 crop = bgr[max(0, y0 - pad):y1 + pad, max(0, x0 - pad):x1 + pad]
                 if crop.size == 0:
                     continue
@@ -259,8 +270,12 @@ def recover_cjk(
     # are tried before giving up.
     STRIP_HALF = 11
     CELL_HALF = 13
-    OFFSETS = (0, -4, 4, -8, 8, -12, 12, -2, 2, -6, 6, -10, 10)
-    for row in rows:
+    # Cap the search: a dense index column used to trigger 13 offsets x 4
+    # readers x 4 scales per row, which made one screenshot take over a minute.
+    # The first rows carry the useful evidence; later rows are marginal CJK.
+    OFFSETS = (0, -6, 6)
+    MAX_ROWS = 8
+    for row in rows[:MAX_ROWS]:
         y_lo = min(int(i.bbox[1]) for i in row)
         y_hi = max(int(i.bbox[3]) for i in row)
         centre = (y_lo + y_hi) / 2

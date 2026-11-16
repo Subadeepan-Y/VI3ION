@@ -16,6 +16,7 @@ surfaced here; it belongs in debug logs.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from dataclasses import dataclass, field
@@ -296,10 +297,18 @@ def analyze_image(image_path: str | Path) -> AnalyzerResult:
     started = time.perf_counter()
     _ensure_debug_log()
     path = Path(image_path)
-    bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    try:
+        bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    except cv2.error as exc:  # truncated files raise inside OpenCV
+        raise ValueError(f"could not decode image {path}: {exc}") from exc
     if bgr is None:
         raise ValueError(f"could not decode image: {path}")
     height, width = bgr.shape[:2]
+    if width < 16 or height < 16:
+        raise ValueError(
+            f"image too small to analyse ({width}x{height}); "
+            "need at least 16x16 pixels"
+        )
 
     # Small captures (low-DPI screenshots, scaled thumbnails) lose text to the
     # OCR pass. Upscale before OCR and map the boxes back afterwards.
@@ -334,7 +343,10 @@ def analyze_image(image_path: str | Path) -> AnalyzerResult:
     # low-resource mode (local models rarely need marginal kanji).
     from .config import get_settings
 
-    if not get_settings().low_resource:
+    # CJK margin recovery is the single most expensive pass (it can re-read a
+    # dense screenshot dozens of times). Low-resource machines already skip it;
+    # VI3ION_CJK=0 lets the stress harness and batch jobs skip it too.
+    if not get_settings().low_resource and os.environ.get("VI3ION_CJK", "1") != "0":
         items.extend(recover_cjk(bgr, items, width, height))
 
     sections: dict[str, list[TextItem]] = {region: [] for region in REGION_ORDER}

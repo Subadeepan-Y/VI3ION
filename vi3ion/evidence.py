@@ -116,7 +116,9 @@ def detail_focus(bgr: np.ndarray) -> str | None:
                 int(row * height / EDGE_ROWS):int((row + 1) * height / EDGE_ROWS),
                 int(column * width / EDGE_COLUMNS):int((column + 1) * width / EDGE_COLUMNS),
             ]
-            cells.append(((cell > 0).mean(), row, column))
+            # A tiny image can produce an empty grid cell; guard the mean so
+            # the brief never emits a numpy divide warning.
+            cells.append((float((cell > 0).mean()) if cell.size else 0.0, row, column))
     busiest = max(cells, key=lambda item: item[0])
     emptiest = min(cells, key=lambda item: item[0])
     mean = float(np.mean([cell[0] for cell in cells])) or 1e-6
