@@ -274,8 +274,19 @@ def recover_cjk(
     # readers x 4 scales per row, which made one screenshot take over a minute.
     # The first rows carry the useful evidence; later rows are marginal CJK.
     OFFSETS = (0, -6, 6)
-    MAX_ROWS = 8
+    MAX_ROWS = 6
+    # Hard time budget: marginal kanji must never cost minutes on a dense UI.
+    # The first rows (the useful ones) get the effort; the rest are skipped.
+    import os
+    import time
+
+    budget = float(os.environ.get("VI3ION_CJK_BUDGET_S", "4"))
+    started = time.monotonic()
+    cell_fallback = os.environ.get("VI3ION_CJK_CELLS", "") == "1"
     for row in rows[:MAX_ROWS]:
+        if time.monotonic() - started > budget:
+            logger.debug("CJK recovery stop: time budget %.1fs", budget)
+            break
         y_lo = min(int(i.bbox[1]) for i in row)
         y_hi = max(int(i.bbox[3]) for i in row)
         centre = (y_lo + y_hi) / 2
@@ -286,8 +297,11 @@ def recover_cjk(
         # because the faint glyphs sit a few px lower or higher than the label.
         y0 = max(0, int(centre) - STRIP_HALF)
         y1 = min(bgr.shape[0], int(centre) + STRIP_HALF)
-        full = _cjk_reads(bgr, y0, y1, width, FULL_SCALES, STRIP_X0)
-        ctx = _cjk_reads(bgr, y0, y1, width, CONTEXT_SCALES, STRIP_X0, contrast=True)
+        # Read the rightmost ~320 px, whatever the screenshot size. A fixed
+        # pixel offset made wide (4K) screenshots feed a 2000 px strip to OCR.
+        strip_x0 = max(0, width - 320)
+        full = _cjk_reads(bgr, y0, y1, width, FULL_SCALES, strip_x0)
+        ctx = _cjk_reads(bgr, y0, y1, width, CONTEXT_SCALES, strip_x0, contrast=True)
         value = None
         if ctx is not None and ctx[1] and len(ctx[1]) > tail:
             value = ctx[1]
@@ -300,7 +314,7 @@ def recover_cjk(
             japan_strip = _japan_strip_read(bgr, y0, y1, width)
             if japan_strip is not None and len(japan_strip) > tail:
                 value = japan_strip
-        if value is None:
+        if value is None and cell_fallback:
             for offset in OFFSETS:
                 cy0 = max(0, int(centre) + offset - CELL_HALF)
                 cy1 = min(bgr.shape[0], int(centre) + offset + CELL_HALF)
