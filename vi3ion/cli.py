@@ -81,6 +81,22 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_screenshot(args: argparse.Namespace) -> int:
+    """Capture the current screen and analyse it locally (no file path needed)."""
+    from vi3ion.mcp_server import screenshot as capture
+
+    raw = capture(
+        detail=args.detail,
+        context=getattr(args, "context", None),
+        all_screens=args.all_screens,
+    )
+    print(raw)
+    try:
+        return 0 if json.loads(raw).get("ok") else 1
+    except Exception:  # noqa: BLE001 - the tool always prints JSON
+        return 0
+
+
 def cmd_brief(args: argparse.Namespace) -> int:
     from vi3ion.brief import make_brief
 
@@ -1124,6 +1140,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="label to attach to the image in the image memory (e.g. 'dashboard v1')",
     )
     analyze.set_defaults(func=cmd_analyze)
+
+    screenshot = sub.add_parser(
+        "screenshot",
+        help="capture the current screen and analyse it locally (no path needed)",
+    )
+    screenshot.add_argument(
+        "--detail",
+        default="compact",
+        choices=["compact", "standard", "full"],
+        help="evidence verbosity (default: compact)",
+    )
+    screenshot.add_argument(
+        "--context",
+        default=None,
+        help="user message that accompanied the screenshot (cross-checked against code)",
+    )
+    screenshot.add_argument(
+        "--all-screens",
+        action="store_true",
+        help="capture all monitors instead of the primary screen",
+    )
+    screenshot.set_defaults(func=cmd_screenshot)
 
     brief = sub.add_parser("brief", help="print the text-only brief for an image")
     brief.add_argument("path", help="path to an image")

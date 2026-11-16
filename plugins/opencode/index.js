@@ -414,10 +414,13 @@ async function materializeAttachment(file) {
 
 function isVisionCapable(model) {
   if (!model) return false;
-  // Authoritative: OpenCode knows the model's input modalities.
+  // Authoritative: OpenCode knows the model's input modalities. A model that
+  // explicitly declares `["text"]` is text-only — a name containing "gpt",
+  // "glm" or "deepseek" must NEVER turn it into a "vision" model, because that
+  // would switch off Vi3ion's eyes exactly where they are needed.
   const input = model.capabilities && model.capabilities.input;
   if (Array.isArray(input) && input.length) {
-    if (input.some((m) => String(m).toLowerCase().startsWith("image"))) return true;
+    return input.some((m) => String(m).toLowerCase().startsWith("image"));
   }
   const s = `${model.providerID || ""} ${model.id || ""} ${model.modelID || ""} ${model.name || ""}`.toLowerCase();
   // Local runtimes are checked first: a local OpenAI-compatible server is
@@ -607,6 +610,21 @@ async function activeModel(ctx, event) {
   // context default so the intro never shows "?/?".
   return resolveModel(ctx, event);
 }
+
+// Last-resort notice when an image was attached to the message but no
+// measured evidence made it into the model request. This is the exact failure
+// the user sees as "the AI says it cannot read clipboard images": the model is
+// blind, the image is on the message, and Vi3ion's eyes never arrived. Point
+// it at the clipboard tool instead of letting it give up.
+const PASTED_IMAGE_FALLBACK = [
+  '<context key="vi3ion-pasted-image">',
+  "An image is attached to the user's message, but this request contains no Vi3ion evidence for it.",
+  "Do NOT tell the user you cannot read images. Call inspect_image(path=\"clipboard\", detail=\"compact\")",
+  "now — Vi3ion reads the system clipboard locally and returns measured OCR/geometry.",
+  "If that tool is unavailable or fails, say so plainly and ask for the image as a file path.",
+  "Never describe the image from its name or from memory.",
+  "</context>",
+].join("\n");
 
 function confirmInstruction(fileName) {
   return [
@@ -1559,9 +1577,15 @@ async function handleRequestHook(ctx, event, hookName, options, mode) {
 
   // Image analysis. The attachment (mime + bytes) only exists on the message,
   // so this is where images are found and measured.
+  let eyesDelivered = false;
+  let attachedImages = 0;
+  if (hookName === "context") {
+    attachedImages = imagesFromMessages(event.messages).images.length;
+  }
   if (hookName === "context" && (await shouldApply(ctx, mode, model))) {
     const result = await analyseMessageImages(ctx, event, model, vision, options);
     if (result && result.blocks.length) {
+      eyesDelivered = true;
       for (const block of result.blocks) {
         event.system.push({ type: "text", text: block });
       }
@@ -1585,11 +1609,24 @@ async function handleRequestHook(ctx, event, hookName, options, mode) {
       const state = (await ctx.storage.get(EV_STATE_KEY)) || {};
       const stored = state[event.sessionID];
       if (stored && Array.isArray(stored.blocks) && stored.blocks.length) {
+        eyesDelivered = true;
         for (const block of stored.blocks) {
           event.system.push({ type: "text", text: block });
         }
       }
     }
+  }
+  // The model is blind and an image was attached, but no measurement arrived.
+  // Give it the clipboard fallback so it can fetch eyes instead of giving up.
+  if (hookName === "context" && !vision && !eyesDelivered && attachedImages > 0) {
+    event.system.push({ type: "text", text: PASTED_IMAGE_FALLBACK });
+    await recordInjection({
+      session_id: event.sessionID,
+      model: key,
+      role: "eyes",
+      reason: "pasted-image fallback",
+      blocks: [{ key: "vi3ion-pasted-image", chars: PASTED_IMAGE_FALLBACK.length, text: PASTED_IMAGE_FALLBACK }],
+    }).catch(() => {});
   }
 }
 

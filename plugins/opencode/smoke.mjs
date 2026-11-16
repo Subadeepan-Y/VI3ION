@@ -211,7 +211,12 @@ assert.ok(compactionEyes.includes("Keep this role in mind in summaries"), "compa
 }
 
 // --- 2. vision model: assistant note (default ON) ---
-const visionCtx = makeCtx({ providerID: "deepseek", id: "deepseek-v4.1-flash" });
+const visionCtx = makeCtx({
+  providerID: "deepseek",
+  id: "deepseek-v4.1-flash",
+  // Explicit image input: OpenCode's declared modalities are authoritative.
+  capabilities: { input: ["text", "image"], output: ["text"] },
+});
 await plugin.setup(visionCtx);
 const ev2 = await runHook(visionCtx);
 assert.strictEqual(ev2, "look at this", "vision: prompt text must stay untouched");
@@ -220,6 +225,7 @@ assert.ok(instr(visionCtx, "vi3ion-intro").includes("primary"), "vision: lead ro
 const presenceConfirmer = await runSystemHook("compaction", {
   providerID: "deepseek",
   id: "deepseek-v4.1-flash",
+  capabilities: { input: ["text", "image"], output: ["text"] },
 });
 assert.ok(presenceConfirmer.includes("assistant"), "compaction: assistant role missing");
 
@@ -382,6 +388,14 @@ assert.ok(onRequest.includes("vi3ion-auto"), "re-enabled: evidence block missing
     "capabilities: image input must be authoritative",
   );
   assert.ok(
+    !isVisionCapable({ providerID: "x", id: "gpt-6-luna", capabilities: { input: ["text"], output: ["text"] } }),
+    "capabilities: explicit text-only input must win over a vision-looking model name",
+  );
+  assert.ok(
+    !isVisionCapable({ providerID: "x", id: "deepseek-v4.1-flash", capabilities: { input: ["text"], output: ["text"] } }),
+    "capabilities: text-only router model must not be misclassified as vision",
+  );
+  assert.ok(
     !isVisionCapable({ providerID: "openai", id: "qwen3-8b", baseURL: "http://127.0.0.1:8080/v1" }),
     "local: generic provider id must not be treated as vision capable",
   );
@@ -512,4 +526,29 @@ assert.ok(onRequest.includes("vi3ion-auto"), "re-enabled: evidence block missing
   assert.strictEqual(prompt, "look at this", "broken: prompt hook changed the user text");
 }
 
-console.log("SMOKE OK (intro / presence / compaction / message-images / clipboard / retention / cache / trace / visionless / vision / off / on / diff / model-switch / local / mcp-reload / fault-isolation)");
+// --- 18. pasted image with no bytes: the model gets the clipboard fallback ---
+{
+  const fallbackCtx = makeCtx({ providerID: "inception", id: "mercury-3" });
+  await plugin.setup(fallbackCtx);
+  const request = await runContext(fallbackCtx, {
+    sessionID: "ses_fallback",
+    messages: [{
+      role: "user",
+      text: "[Image 1] check this",
+      // A data URI with no bytes: an image is attached but cannot be
+      // materialised. The model must be told to read the clipboard, not to
+      // tell the user it cannot see images.
+      files: [{ mime: "image/png", name: "clipboard", uri: "data:image/png;base64," }],
+    }],
+  });
+  assert.ok(request.includes("vi3ion-pasted-image"), "fallback: notice missing from the request");
+  assert.ok(request.includes('inspect_image(path="clipboard"'), "fallback: clipboard tool not suggested");
+  assert.ok(request.includes("Do NOT tell the user you cannot read images"), "fallback: give-up wording not blocked");
+  const trace = JSON.parse(fs.readFileSync(TRACE, "utf8"));
+  assert.ok(
+    trace.history.some((h) => h.reason === "pasted-image fallback"),
+    "fallback: injection not traced",
+  );
+}
+
+console.log("SMOKE OK (intro / presence / compaction / message-images / clipboard / retention / cache / trace / visionless / vision / off / on / diff / model-switch / local / mcp-reload / fault-isolation / pasted-image-fallback)");

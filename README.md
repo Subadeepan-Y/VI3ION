@@ -187,6 +187,7 @@ vi3ion mcp-check                   # real MCP handshake: does the server start?
 vi3ion version                     # installed vs latest (PyPI/npm) + update commands
 vi3ion updates auto on|off         # auto-update consent (off by default)
 vi3ion analyze screenshot.png      # full analysis as JSON
+vi3ion screenshot                  # capture the current screen and analyse it
 vi3ion brief screenshot.png        # text-only brief for a vision-less model
 vi3ion score screenshot.png        # brief fidelity vs the ground truth
 vi3ion local                       # local LLM runtimes + the recommended role
@@ -252,7 +253,8 @@ Agents must preserve that distinction when reporting to users.
 
 | Tool | Purpose |
 |---|---|
-| `inspect_image` | Ingest + analyse an image (by `path` or `image_id`). |
+| `inspect_image` | Ingest + analyse an image (by `path`, `path="clipboard"`, or `image_id`). |
+| `screenshot` | Capture the current screen and analyse it — no path needed. Fails soft on headless machines. |
 | `inspect_region` | Deep-dive on `[x0,y0,x1,y1]`; coordinates mapped back to original. |
 | `query_evidence` | Query stored evidence by kind/text/region/confidence without re-analysis. |
 | `verify_claim` | Check a claim ("Save is aligned with Cancel") against measurements. |

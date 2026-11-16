@@ -8,6 +8,7 @@ IMPORTANT: stdout is the MCP protocol channel. Never print to stdout here.
 
 from __future__ import annotations
 
+import io
 import json
 import logging
 import os
@@ -159,6 +160,45 @@ def inspect_image(
         return _json(response, detail)
     except Exception as exc:  # noqa: BLE001 - tool boundary must not crash the agent
         logger.exception("inspect_image failed")
+        return _error(exc)
+
+
+@server.tool(
+    description=(
+        "Capture the current screen and inspect it with Vi3ion — no file path needed. "
+        "Use when the user asks what is on screen, when a screenshot is mentioned but no "
+        "file was attached, or as the blind-model fallback for a pasted clipboard image. "
+        "Everything stays local: the frame is captured in memory, ingested, measured and "
+        "never sent anywhere. Returns the same measured evidence as inspect_image "
+        "(OCR, geometry, colours). On a headless machine this reports an error — ask the "
+        "user for the image as a file path instead."
+    )
+)
+def screenshot(
+    detail: str = "compact",
+    context: str | None = None,
+    all_screens: bool = False,
+) -> str:
+    try:
+        from PIL import ImageGrab
+
+        grabbed = ImageGrab.grab(all_screens=all_screens) if all_screens else ImageGrab.grab()
+        if grabbed is None:
+            raise RuntimeError("could not capture the screen (headless or no display)")
+        buf = io.BytesIO()
+        grabbed.save(buf, format="PNG")
+        record, _ = engine().loader.ingest_bytes(
+            buf.getvalue(), filename="screenshot.png", source="screen"
+        )
+        response = engine().inspect_image(
+            image_id=record["image_id"],
+            detail=detail,
+            agent="mcp",
+            context=context,
+        )
+        return _json(response, detail)
+    except Exception as exc:  # noqa: BLE001 - tool boundary must not crash the agent
+        logger.exception("screenshot failed")
         return _error(exc)
 
 

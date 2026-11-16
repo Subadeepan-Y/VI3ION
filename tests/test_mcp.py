@@ -18,6 +18,7 @@ def test_tools_registered():
     tool_names = {tool.name for tool in tools}
     assert tool_names == {
         "inspect_image",
+        "screenshot",
         "inspect_region",
         "query_evidence",
         "verify_claim",

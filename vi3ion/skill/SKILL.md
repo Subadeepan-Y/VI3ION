@@ -23,6 +23,7 @@ of the same screen.
 | Tool | Use for |
 |---|---|
 | `inspect_image` | First contact with an image. `path` (local file or "clipboard") or `image_id` (already seen). |
+| `screenshot` | Capture the current screen and inspect it — no path needed. Use when asked what is on screen, or when an image is attached but no evidence block arrived. Fails soft on headless machines. |
 | `inspect_region` | Small text, icons, crowded areas, or zooming into uncertain regions. Region is `[x0,y0,x1,y1]` in **original pixels**; output is remapped to original coordinates. |
 | `query_evidence` | Fetch complete OCR/geometry when the first response was truncated, or filter by kind/region/confidence. |
 | `verify_claim` | Before asserting any spatial or visual fact: alignment, distance, size, containment, overlap, text, colour, dimensions. |
