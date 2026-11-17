@@ -150,7 +150,7 @@ running and which role fits.
   right"*, never *"a button"* — that keeps the evidence auditable, and naming
   things is the model's job.
 - Very faint decorative lettering is not transcribed, and the output says so.
-- OCR is the weak spot, not the geometry: 95.2% average fidelity across the
+- OCR is the weak spot, not the geometry: 96.9% average fidelity across the
   bundled ground-truth fixtures (numbers below).
 
 ---
@@ -162,10 +162,10 @@ network, ~5s on a 1919x949 screenshot:
 
 | Component | Score | What it measures |
 |---|---|---|
-| **Brief fidelity** | **95.2%** | average across the three bundled fixtures |
-| Text recall | 94.0% | share of readable text that reached the brief |
-| Text precision | 91.4% | share of the brief's quoted text that is really in the image |
-| Region accuracy | 98.9% | matched text filed under the right region |
+| **Brief fidelity** | **96.9%** | average across the five bundled fixtures |
+| Text recall | 96.4% | share of readable text that reached the brief |
+| Text precision | 100% | share of the brief's confident quoted text that is really in the image |
+| Region accuracy | 99.4% | matched text filed under the right region |
 | Structure | 100% | composition line, colour map, shape sentences, honesty note |
 
 Scores are reproducible: `vi3ion score --all`. Ground-truth entries marked
@@ -176,16 +176,18 @@ are garbled. Geometry, colour and layout stay above 96% throughout.
 
 ### Before and after
 
-The last few changes were measured on the same three images every time. The
-middle column is a contrast-enhancement experiment that made things worse and
-was switched off by default (it is still available with `VI3ION_OCR_CLAHE=1`).
+The three original fixtures were scored at each stage. The middle column is a
+contrast-enhancement experiment that made things worse and was switched off by
+default (still available with `VI3ION_OCR_CLAHE=1`). Two more fixtures — a
+known-text card and a red-apple photo from the internet — were added later and
+are included in the headline average above.
 
 | Fixture | Earlier | Experiment | Now |
 |---|---:|---:|---:|
-| Difficult dark screenshot | 80.4% | 75.3% | **90.7%** |
-| Settings screenshot | 95.2% | 90.1% | **95.0%** |
+| Difficult dark screenshot | 80.4% | 75.3% | **95.8%** |
+| Settings screenshot | 95.2% | 90.1% | **96.4%** |
 | Clean settings dialog | 100% | 100% | **100%** |
-| **Average** | **91.9%** | **88.7%** | **95.2%** |
+| **Average (3 fixtures)** | **91.9%** | **88.7%** | **97.4%** |
 
 ```mermaid
 xychart-beta
@@ -193,7 +195,7 @@ xychart-beta
     x-axis ["dark screenshot", "settings shot", "clean dialog"]
     y-axis "fidelity %" 70 --> 100
     bar [80.4, 95.2, 100]
-    line [95.2, 95.0, 100]
+    line [95.8, 96.4, 100]
 ```
 
 The gain came from four small fixes: uncertain ground-truth guesses stop
