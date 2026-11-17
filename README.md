@@ -176,27 +176,19 @@ are garbled. Geometry, colour and layout stay above 96% throughout.
 
 ### Before and after
 
-The three original fixtures were scored at each stage. The middle column is a
-contrast-enhancement experiment that made things worse and was switched off by
-default (still available with `VI3ION_OCR_CLAHE=1`). Two more fixtures — a
-known-text card and a red-apple photo from the internet — were added later and
-are included in the headline average above.
+Same three original fixtures, scored before and after. A contrast-enhancement
+experiment made things worse and was switched off by default (still available
+with `VI3ION_OCR_CLAHE=1`). Two more fixtures — a known-text card and a
+red-apple photo — were added later and are in the headline average above.
 
-| Fixture | Earlier | Experiment | Now |
-|---|---:|---:|---:|
-| Difficult dark screenshot | 80.4% | 75.3% | **95.8%** |
-| Settings screenshot | 95.2% | 90.1% | **96.4%** |
-| Clean settings dialog | 100% | 100% | **100%** |
-| **Average (3 fixtures)** | **91.9%** | **88.7%** | **97.4%** |
+![Brief fidelity before and after, by fixture](docs/assets/fidelity-before-after.svg)
 
-```mermaid
-xychart-beta
-    title "Fidelity by fixture (%) - earlier vs now"
-    x-axis ["dark screenshot", "settings shot", "clean dialog"]
-    y-axis "fidelity %" 70 --> 100
-    bar [80.4, 95.2, 100]
-    line [95.8, 96.4, 100]
-```
+| Fixture | Before | After |
+|---|---:|---:|
+| Difficult dark screenshot | 80.4% | **95.8%** |
+| Settings screenshot | 95.2% | **96.4%** |
+| Clean settings dialog | 100% | **100%** |
+| **Average (3 fixtures)** | **91.9%** | **97.4%** |
 
 The gain came from four small fixes: uncertain ground-truth guesses stop
 counting against recall, keyboard markers like `[M]` no longer count as text,

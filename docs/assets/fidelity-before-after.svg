@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380" viewBox="0 0 760 380" role="img" aria-label="Before and after fidelity by fixture">
+  <title>Brief fidelity before and after, by fixture</title>
+  <style>
+    .axis { stroke: #8b949e; stroke-width: 1; }
+    .grid { stroke: #30363d; stroke-width: 1; }
+    .tick { fill: #8b949e; font: 12px system-ui, sans-serif; }
+    .label { fill: #c9d1d9; font: 14px system-ui, sans-serif; }
+    .value { fill: #c9d1d9; font: 12px system-ui, sans-serif; }
+    .title { fill: #f0f6fc; font: bold 17px system-ui, sans-serif; }
+    .legend { fill: #c9d1d9; font: 13px system-ui, sans-serif; }
+    .before { fill: #8957e5; }
+    .after { fill: #2da44e; }
+  </style>
+
+  <text x="380" y="28" text-anchor="middle" class="title">Brief fidelity: before vs after</text>
+
+  <!-- y axis: 70% to 100%, plot y 60..320 -->
+  <line x1="80" y1="60" x2="80" y2="320" class="axis"/>
+  <line x1="80" y1="320" x2="730" y2="320" class="axis"/>
+  <g>
+    <line x1="80" y1="320" x2="730" y2="320" class="grid"/><text x="70" y="324" text-anchor="end" class="tick">70</text>
+    <line x1="80" y1="273.3" x2="730" y2="273.3" class="grid"/><text x="70" y="277" text-anchor="end" class="tick">75</text>
+    <line x1="80" y1="226.7" x2="730" y2="226.7" class="grid"/><text x="70" y="230" text-anchor="end" class="tick">80</text>
+    <line x1="80" y1="180" x2="730" y2="180" class="grid"/><text x="70" y="184" text-anchor="end" class="tick">85</text>
+    <line x1="80" y1="133.3" x2="730" y2="133.3" class="grid"/><text x="70" y="137" text-anchor="end" class="tick">90</text>
+    <line x1="80" y1="86.7" x2="730" y2="86.7" class="grid"/><text x="70" y="90" text-anchor="end" class="tick">95</text>
+    <line x1="80" y1="60" x2="730" y2="60" class="grid"/><text x="70" y="64" text-anchor="end" class="tick">100</text>
+  </g>
+
+  <!-- plot scale: 70% at y=320, 100% at y=60 => 8.667 px per point -->
+  <!-- dark screenshot: before 80.4% -> h=90.1, after 95.8% -> h=223.6 -->
+  <rect x="125" y="229.9" width="58" height="90.1" class="before"/>
+  <rect x="187" y="96.4" width="58" height="223.6" class="after"/>
+  <text x="154" y="223" text-anchor="middle" class="value">80.4</text>
+  <text x="216" y="90" text-anchor="middle" class="value">95.8</text>
+  <text x="185" y="340" text-anchor="middle" class="label">dark screenshot</text>
+
+  <!-- settings shot: before 95.2% -> h=218.4, after 96.4% -> h=228.8 -->
+  <rect x="335" y="101.6" width="58" height="218.4" class="before"/>
+  <rect x="397" y="91.2" width="58" height="228.8" class="after"/>
+  <text x="364" y="95" text-anchor="middle" class="value">95.2</text>
+  <text x="426" y="85" text-anchor="middle" class="value">96.4</text>
+  <text x="395" y="340" text-anchor="middle" class="label">settings shot</text>
+
+  <!-- clean dialog: before 100%, after 100% -> h=260 -->
+  <rect x="545" y="60" width="58" height="260" class="before"/>
+  <rect x="607" y="60" width="58" height="260" class="after"/>
+  <text x="574" y="54" text-anchor="middle" class="value">100</text>
+  <text x="636" y="54" text-anchor="middle" class="value">100</text>
+  <text x="605" y="340" text-anchor="middle" class="label">clean dialog</text>
+
+  <rect x="250" y="358" width="14" height="14" class="before"/>
+  <text x="270" y="370" class="legend">before</text>
+  <rect x="340" y="358" width="14" height="14" class="after"/>
+  <text x="360" y="370" class="legend">after</text>
+</svg>
