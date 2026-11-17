@@ -417,4 +417,17 @@ The dashboard proxies `/api` to the server and is only mounted when
 
 ## Stress test on real screenshots
 
-Measured on `698` screenshots from one real folder (1971s total, 6594ms and 396 tokens per image on this PC). Failures: 6 (tiny or corrupt images, now rejected with a clear message). Full data: `docs/full-analysis-report.json` and `docs/full-analysis-progress.jsonl`.
+Measured on `698` screenshots from one real folder: 1,971 s total, 6,594 ms
+and 396 tokens per image **on the machine below**. Failures: 6 (tiny or
+corrupt captures, now rejected with a clear message). Full data:
+`docs/full-analysis-report.json` and `docs/full-analysis-progress.jsonl`.
+
+**Test machine:** AMD Ryzen 5 5500GT (6 cores / 12 threads), 15.3 GB RAM,
+AMD Radeon integrated graphics, Windows 11 Pro build 26200, Python 3.13.15,
+RapidOCR 1.2.3 / ONNX Runtime 1.31.1 / OpenCV 5.0.0.93. CPU-only OCR;
+`low_resource` was off.
+
+**Results will vary.** Speed scales with CPU, image resolution, text density
+and thermal throttling. A smaller laptop, a high-DPI 4K screen or a dense
+terminal screenshot will be slower and may use a different evidence tier.
+These numbers describe one machine, not a guaranteed baseline.

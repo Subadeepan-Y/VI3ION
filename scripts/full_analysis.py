@@ -30,6 +30,52 @@ def log(message: str) -> None:
     print(f"[{datetime.now():%H:%M:%S}] {message}", flush=True)
 
 
+def machine_specs() -> dict:
+    """Describe the test machine so numbers are never presented as universal.
+
+    Set VI3ION_MACHINE_SPECS to a JSON string to override with a friendlier
+    description (CPU model, GPU, etc.) gathered from the OS.
+    """
+    import platform
+
+    override = os.environ.get("VI3ION_MACHINE_SPECS", "").strip()
+    if override:
+        try:
+            return json.loads(override)
+        except Exception:  # noqa: BLE001
+            pass
+    specs = {
+        "cpu": platform.processor() or "unknown",
+        "architecture": platform.machine(),
+        "os": platform.platform(),
+        "python": sys.version.split()[0],
+        "gpu": "not detected (CPU-only OCR unless configured otherwise)",
+    }
+    try:
+        import ctypes
+
+        class MemoryStatus(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+
+        status = MemoryStatus()
+        status.dwLength = ctypes.sizeof(status)
+        ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status))
+        specs["ram_gb"] = round(status.ullTotalPhys / (1024 ** 3), 1)
+    except Exception:  # noqa: BLE001 - non-Windows or restricted environment
+        specs["ram_gb"] = "unknown"
+    return specs
+
+
 def git(*args: str) -> None:
     try:
         subprocess.run(
@@ -95,6 +141,11 @@ def analyse_all() -> None:
     ok = [r for r in rows if not r.get("error")]
     report = {
         "finished_at": datetime.now().isoformat(timespec="seconds"),
+        "machine": machine_specs(),
+        "results_may_vary": (
+            "Measured on one machine. Speed depends on CPU, image resolution, "
+            "text density and thermal throttling; other machines will differ."
+        ),
         "total_images": len(files),
         "analysed": len(rows),
         "elapsed_seconds": round(time.perf_counter() - started),
