@@ -2,6 +2,33 @@
 
 Newest first. Each entry is also a commit, so you can see exactly what moved.
 
+## v0.1.5 / plugin v0.1.7 — proof and traceability
+
+Built from an outside review. The theme is proving that a blind model can do
+work, not adding more gauges.
+
+- **End-to-end benchmark.** `scripts/task_benchmark.py` runs the same text-only
+  model with and without VI3ION evidence, measuring task accuracy, latency and
+  tokens. `--dry-run` shows the structure without calling a model.
+- **Question-focused evidence.** `vi3ion ask` / MCP `ask` returns only the
+  measurements relevant to a question, with stable IDs and UNCERTAIN flags.
+- **Traceable graph.** `vi3ion graph` / MCP `evidence_graph` exposes stable IDs,
+  provenance (module, method, source), boxes and relationships. Claims can
+  reference evidence instead of re-finding it.
+- **False-confidence audit.** `vi3ion audit` / MCP `confidence_audit` counts
+  confident text the image does not support — a hallucination-risk number,
+  separate from recall.
+- **Privacy controls.** `--no-store` deletes the copy after a command,
+  `vi3ion purge --days N --confirm` deletes stored images, and a warning is
+  printed when a remote semantic provider is enabled. Policy wording changed
+  from "never leaves" to the accurate "local by default, remote opt-in".
+- **Cold vs warm performance.** `scripts/perf_bench.py` reports cold, warm p50
+  and p95 with machine specs; `PERFORMANCE.md` explains the difference.
+- **Blueprint v2.** Recreation recipes now include text, region labels and
+  spacing/alignment instructions, not just shapes.
+- **README demo.** A short with/without transcript and the command to reproduce
+  it on your own model.
+
 ## v0.1.4 / plugin v0.1.6 — the eyes get sharper
 
 - **Recipes for recreation.** `vi3ion blueprint image.png` now returns a

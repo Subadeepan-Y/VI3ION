@@ -213,6 +213,28 @@ def reconstruction_blueprint(
                 "rotation_deg": attrs.get("rotation_deg"),
                 "area_px": attrs.get("area_px"),
             })
+        # Text and layout constraints: a blind generator needs more than blobs.
+        texts: list[dict[str, Any]] = []
+        for item in response.evidence:
+            if item.kind.value != "text":
+                continue
+            box = [float(v) for v in item.bbox.as_rounded()]
+            pct = [
+                round(box[0] / width * 100, 1), round(box[1] / height * 100, 1),
+                round(box[2] / width * 100, 1), round(box[3] / height * 100, 1),
+            ] if width and height else None
+            cx = (pct[0] + pct[2]) / 2 if pct else 50
+            cy = (pct[1] + pct[3]) / 2 if pct else 50
+            column = "left" if cx < 33 else ("right" if cx > 66 else "centre")
+            band = "top" if cy < 33 else ("bottom" if cy > 66 else "middle")
+            texts.append({
+                "value": item.label,
+                "box_pct": pct,
+                "region": f"{band} {column}",
+                "colour": item.attributes.get("ink_hex"),
+                "uncertain": "uncertain" in item.label.lower(),
+            })
+
         lines = [
             f"Recreate a {width}x{height} image with a {bg} background.",
             "Place these measured shapes (percentages are of canvas width/height):",
@@ -224,12 +246,26 @@ def reconstruction_blueprint(
                 f"from {box[0]}%,{box[1]}% to {box[2]}%,{box[3]}%"
                 if box else f"- {shape['type']} filled {shape['fill'] or 'unknown'}"
             )
-        lines.append("Match geometry and colour exactly; do not invent objects not listed.")
+        if texts:
+            lines.append("Place this measured text (keep the reading and rough position):")
+            for text in texts[:60]:
+                box = text["box_pct"]
+                position = (
+                    f" at {box[0]}%,{box[1]}% to {box[2]}%,{box[3]}% ({text['region']})"
+                    if box else ""
+                )
+                colour = f" in {text['colour']}" if text["colour"] else ""
+                lines.append(f'- "{text["value"]}"{colour}{position}')
+        lines.append(
+            "Keep the relative sizes, alignment and spacing of everything listed. "
+            "Match geometry, colour and text exactly; do not invent objects not listed."
+        )
         return json.dumps({
             "ok": True,
             "image_id": response.image_id,
             "canvas": {"width": width, "height": height, "background": bg},
             "shapes": shapes,
+            "text": texts,
             "recreation_prompt": "\n".join(lines),
         }, ensure_ascii=False)
     except Exception as exc:  # noqa: BLE001 - tool boundary must not crash the agent
@@ -517,6 +553,70 @@ def doctor() -> str:
         return buffer.getvalue()
     except Exception as exc:  # noqa: BLE001
         logger.exception("doctor failed")
+        return _error(exc)
+
+
+@server.tool(
+    description=(
+        "Question-focused evidence. Give an image_id (or a path) and a question; "
+        "get back only the measured evidence relevant to it, with stable IDs and "
+        "explicit UNCERTAIN flags. Use this instead of dumping a whole brief when "
+        "the model has a small context window. It does not guess the answer."
+    )
+)
+def ask(image_id: str | None = None, path: str | None = None, question: str = "") -> str:
+    try:
+        from vi3ion.evidence_api import focus_evidence
+
+        if not question.strip():
+            return json.dumps({"ok": False, "error": "question is required"}, ensure_ascii=False)
+        response = engine().inspect_image(image_id=image_id, path=path, detail="standard", agent="mcp")
+        return json.dumps(focus_evidence(response, question), ensure_ascii=False)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("ask failed")
+        return _error(exc)
+
+
+@server.tool(
+    description=(
+        "Build a traceable evidence graph: stable element IDs, provenance "
+        "(module/method/source), measured boxes, relationships (inside, same_row) "
+        "and explicit uncertainty. Use stable IDs in later claims so the model "
+        "does not have to find the element again."
+    )
+)
+def evidence_graph(image_id: str, max_nodes: int = 40) -> str:
+    try:
+        from vi3ion.evidence_api import evidence_graph as build
+
+        response = engine().query_evidence(image_id=image_id, limit=min(max(max_nodes, 1), 200))
+        return json.dumps(build(response, max_nodes=max_nodes), ensure_ascii=False)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("evidence_graph failed")
+        return _error(exc)
+
+
+@server.tool(
+    description=(
+        "Audit false confidence: count confident text readings that ground truth "
+        "does not support. Lower is better. Requires an expected JSON file "
+        "(tests/fixtures/*.expected.json format) or a list of expected strings. "
+        "This measures hallucination risk, not recall."
+    )
+)
+def confidence_audit(image_id: str, expected: list[str] | None = None, expected_path: str | None = None) -> str:
+    try:
+        from vi3ion.evaluate import load_expected
+        from vi3ion.evidence_api import confidence_audit as audit
+
+        if expected_path:
+            expected = [u["value"] for u in load_expected(expected_path).get("text", []) if u.get("value")]
+        if not expected:
+            return json.dumps({"ok": False, "error": "expected or expected_path is required"}, ensure_ascii=False)
+        response = engine().query_evidence(image_id=image_id, limit=200)
+        return json.dumps(audit(response, expected), ensure_ascii=False)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("confidence_audit failed")
         return _error(exc)
 
 

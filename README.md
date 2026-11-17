@@ -14,8 +14,9 @@ guess what it shows.
 colour things are, how they line up, and what changed since the last
 screenshot.
 
-One `pip install`, one small config block. No cloud, no API key, no image
-ever leaves your machine.
+One `pip install`, one small config block. Local by default, no API key needed;
+remote processing is opt-in. Private images stay on your machine unless you
+explicitly enable a remote provider.
 
 **Made for modest hardware.** Have an older laptop, no GPU, or 8 GB of RAM?
 You cannot run a vision model — that is exactly who this is for. VI3ION does
@@ -118,6 +119,25 @@ measurements** back.
 
 Everything is labelled as **observed** (read from pixels), **inferred**, or
 **unknown**. It never quietly corrects a reading.
+
+### Demo: the same blind model, with and without eyes
+
+Illustrative transcript — run it yourself with a text-only local model via
+`python scripts/task_benchmark.py` (add `--dry-run` to see the structure without
+calling a model).
+
+**Without VI3ION**
+> User: "What does this settings screen say?"  
+> Model: "I cannot see images. Please describe the screen in text."
+
+**With VI3ION**
+> User: "What does this settings screen say?"  
+> Evidence handed to the model: `"Settings" @[44,32,168,69]`; `"Save"` and
+> `"Cancel"` with measured boxes; blue `#2563eb` button.  
+> Model: "It is a Settings screen. The Save button is blue with white text, at
+> x 373–421, y 619–640; Cancel is to its right."
+
+That is the whole product: not prettier OCR, a blind model completing a task.
 
 ### Recreating an image
 
@@ -237,6 +257,11 @@ vi3ion updates auto on|off         # auto-update consent (off by default)
 vi3ion analyze screenshot.png      # full analysis as JSON
 vi3ion screenshot                  # capture the current screen and analyse it
 vi3ion blueprint drawing.png       # measured recipe for recreating an image
+vi3ion ask drawing.png "Where is Save?" --limit 5
+vi3ion graph img_123 --limit 20     # traceable evidence graph
+vi3ion audit image.png ground.expected.json
+vi3ion purge --days 7 --confirm    # delete old stored images
+python scripts/task_benchmark.py --dry-run
 vi3ion brief screenshot.png        # text-only brief for a vision-less model
 vi3ion score screenshot.png        # brief fidelity vs the ground truth
 vi3ion local                       # local LLM runtimes + the recommended role
@@ -304,7 +329,10 @@ Agents must preserve that distinction when reporting to users.
 |---|---|
 | `inspect_image` | Ingest + analyse an image (by `path`, `path="clipboard"`, or `image_id`). |
 | `screenshot` | Capture the current screen and analyse it — no path needed. Fails soft on headless machines. |
-| `reconstruction_blueprint` | A measured recipe (canvas, shapes, colours, percentages) so a generator can recreate a simple image. |
+| `reconstruction_blueprint` | A measured recipe (canvas, shapes, text, colours, percentages) so a generator can recreate a simple image. |
+| `ask` | Only the evidence relevant to a question, with stable IDs and UNCERTAIN flags. For small-context models. |
+| `evidence_graph` | Stable IDs, provenance, boxes and relationships — reference evidence instead of re-finding it. |
+| `confidence_audit` | False-confidence rate against ground truth: confident claims the image does not support. |
 | `inspect_region` | Deep-dive on `[x0,y0,x1,y1]`; coordinates mapped back to original. |
 | `query_evidence` | Query stored evidence by kind/text/region/confidence without re-analysis. |
 | `verify_claim` | Check a claim ("Save is aligned with Cancel") against measurements. |

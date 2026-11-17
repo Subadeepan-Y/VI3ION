@@ -1,0 +1,23 @@
+{
+  "note": "End-to-end tasks for a text-only model. Answers are checked by fuzzy string match, not by an LLM judge.",
+  "tasks": [
+    {
+      "id": "read_settings",
+      "image": "tests/fixtures/sample_ui.png",
+      "question": "What does the settings screen say at the top, and what are the two buttons at the bottom?",
+      "expected": ["Settings", "Save", "Cancel"]
+    },
+    {
+      "id": "find_element",
+      "image": "tests/fixtures/sample_ui.png",
+      "question": "Where is the Save button? Give its pixel box.",
+      "expected": ["373", "619", "421", "640"]
+    },
+    {
+      "id": "describe_colour",
+      "image": "tests/fixtures/sample_ui.png",
+      "question": "What colour is the Save button text?",
+      "expected": ["white", "#f8f8f8"]
+    }
+  ]
+}

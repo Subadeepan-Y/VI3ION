@@ -24,6 +24,20 @@ new page screenshot **while OpenCode was open and idle** in the same session
 Timing: one brief run = **56.6 s cold** (model load + OCR + recovery passes),
 single-threaded startup and multi-threaded inference burst.
 
+## Reproducing cold and warm numbers
+
+Cold and warm are different conditions and must not be reported as one number:
+cold includes one-time OCR model loading, warm reuses the loaded process.
+
+```bash
+python scripts/perf_bench.py tests/fixtures/sample_ui.png --runs 8
+```
+
+The report records cold ms, warm p50/p95 and machine specs in
+`docs/perf-report.json`. The README's "~5 s" line describes a warm brief on a
+small screenshot; the 56.6 s figure above is a cold run on a large one. Results
+will vary with CPU, resolution and text density.
+
 ## What this means for IDE integration
 
 - **Memory floor:** Vi3ion itself needs roughly **0.6 GB** at peak while

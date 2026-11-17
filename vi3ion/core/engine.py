@@ -114,6 +114,34 @@ class Vi3ionEngine:
         self.store.delete(record)
         self.db.delete_image(image_id)
 
+    def forget(self, image_id: str) -> dict[str, Any]:
+        """Delete a stored image and all derived evidence (privacy control)."""
+        record = self.get_record(image_id)
+        self.delete_image(image_id)
+        return {"ok": True, "forgot": image_id, "original_path": record.get("original_path")}
+
+    def purge(self, days: int = 0, confirm: bool = False) -> dict[str, Any]:
+        """Permanently remove stored images older than ``days`` (0 = all)."""
+        from datetime import datetime, timedelta, timezone
+
+        if not confirm:
+            return {"ok": False, "error": "pass confirm=True to delete images"}
+        cutoff = datetime.now(timezone.utc) - timedelta(days=max(0, days))
+        removed: list[str] = []
+        for record in self.db.list_images(limit=100000):
+            try:
+                created = datetime.fromisoformat(str(record.get("created_at", "")).replace("Z", "+00:00"))
+            except ValueError:
+                created = datetime.now(timezone.utc)
+            if days and created > cutoff:
+                continue
+            try:
+                self.delete_image(record["image_id"])
+                removed.append(record["image_id"])
+            except Exception:  # noqa: BLE001 - one bad record must not stop the purge
+                continue
+        return {"ok": True, "removed": len(removed), "image_ids": removed[:20]}
+
     # ----------------------------------------------------------- image memory
     def _register_signature(self, record: dict, evidence: list) -> dict:
         signature = signature_from_evidence(

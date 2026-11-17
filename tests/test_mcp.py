@@ -30,6 +30,9 @@ def test_tools_registered():
         "diff_images",
         "local_stack",
         "doctor",
+        "ask",
+        "evidence_graph",
+        "confidence_audit",
     }
 
 

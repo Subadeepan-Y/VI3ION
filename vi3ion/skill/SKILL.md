@@ -34,6 +34,9 @@ of the same screen.
 | `remember_image` | Name an image ("dashboard v1") so later comparisons can find it. |
 | `diff_images` | Compare two stored images: text/layout changes **and** a pixel-level comparison. |
 | `local_stack` | Which local LLM runtimes are serving (Ollama, llama.cpp, LM Studio, vLLM, …) and whether they accept images. |
+| `ask` | Question-focused evidence with stable IDs and UNCERTAIN flags. Use for small-context models instead of dumping a brief. |
+| `evidence_graph` | Traceable nodes (ID, provenance, box, relationships, uncertainty). Reference IDs in later claims. |
+| `confidence_audit` | False-confidence rate vs ground truth; use to measure hallucination risk, not recall. |
 | `doctor` | Setup self-check: OCR status, RAM/tier, registry, local runtimes, MCP entry point. |
 | `vi3ion_update` (OpenCode plugin tool) | Only when the user asks to update VI3ION: it asks permission first, then installs. Never call it unprompted. |
 

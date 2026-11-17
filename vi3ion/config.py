@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     # never writes inside site-packages; override with VI3ION_DATA_DIR.
     data_dir: Path = Path.home() / ".vi3ion"
 
+    # Privacy: images are kept locally by default. Set store_images=False or
+    # VI3ION_STORE_IMAGES=0 to avoid keeping copies; retention_days>0 enables
+    # automatic expiry. Remote semantic analysis is always opt-in.
+    store_images: bool = True
+    retention_days: int = 0
+
     # Safety limits
     max_image_bytes: int = 40 * 1024 * 1024
     max_image_pixels: int = 80_000_000
@@ -182,6 +188,13 @@ class Settings(BaseSettings):
         if "none" in parts and len(parts) > 1:
             raise ValueError("'none' cannot be combined with other semantic providers")
         return ",".join(dict.fromkeys(parts))
+
+    @property
+    def remote_semantic_enabled(self) -> bool:
+        """True when an image may be sent to a remote semantic provider."""
+        return "remote" in {
+            part.strip().lower() for part in self.semantic_provider.split(",")
+        }
 
     @property
     def originals_dir(self) -> Path:

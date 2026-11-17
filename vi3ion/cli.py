@@ -77,7 +77,68 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
+    if settings.remote_semantic_enabled:
+        print(
+            "warning: a remote semantic provider is enabled; image data may be "
+            "sent off this machine. Check VI3ION_SEMANTIC_PROVIDER.",
+            file=sys.stderr,
+        )
+    if getattr(args, "no_store", False) and response.image_id:
+        _engine().forget(response.image_id)
     print(response.to_json(args.detail))
+    return 0
+
+
+def cmd_purge(args: argparse.Namespace) -> int:
+    """Permanently delete stored images and their evidence."""
+    result = _engine().purge(days=args.days, confirm=args.confirm)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def cmd_ask(args: argparse.Namespace) -> int:
+    """Print evidence relevant to a question (no answer guessing)."""
+    from vi3ion.evidence_api import focus_evidence
+
+    engine = _engine()
+    response = engine.inspect_image(
+        path=args.path, detail=args.detail, context=args.question, agent="cli"
+    )
+    payload = focus_evidence(response, args.question, limit=args.limit)
+    if getattr(args, "no_store", False) and response.image_id:
+        _engine().forget(response.image_id)
+    if args.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(payload["prompt"])
+        if payload["uncertain_ids"]:
+            print(
+                "\nUncertain evidence (do not treat as verified): "
+                + ", ".join(payload["uncertain_ids"])
+            )
+    return 0
+
+
+def cmd_graph(args: argparse.Namespace) -> int:
+    """Print the traceable evidence graph for a remembered image."""
+    from vi3ion.evidence_api import evidence_graph
+
+    response = _engine().query_evidence(args.image_id, limit=args.limit)
+    payload = evidence_graph(response, max_nodes=args.limit)
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_audit(args: argparse.Namespace) -> int:
+    """Measure false-confidence rate against ground truth."""
+    from vi3ion.evaluate import load_expected
+    from vi3ion.evidence_api import confidence_audit
+
+    engine = _engine()
+    response = engine.inspect_image(path=args.path, detail="full", agent="cli")
+    expected = [u["value"] for u in load_expected(args.expected).get("text", []) if u.get("value")]
+    payload = confidence_audit(response, expected)
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -1151,7 +1212,48 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="label to attach to the image in the image memory (e.g. 'dashboard v1')",
     )
+    analyze.add_argument(
+        "--no-store",
+        action="store_true",
+        help="delete the stored copy and evidence after printing the result",
+    )
     analyze.set_defaults(func=cmd_analyze)
+
+    purge = sub.add_parser(
+        "purge",
+        help="permanently delete stored images and evidence (privacy control)",
+    )
+    purge.add_argument("--days", type=int, default=0, help="delete images older than N days (0 = all)")
+    purge.add_argument("--confirm", action="store_true", help="required to actually delete")
+    purge.set_defaults(func=cmd_purge)
+
+    ask = sub.add_parser(
+        "ask",
+        help="return only the measured evidence relevant to a question",
+    )
+    ask.add_argument("path", help="path to an image")
+    ask.add_argument("question", help="what the blind model wants to know")
+    ask.add_argument("--detail", default="standard", choices=["compact", "standard", "full"])
+    ask.add_argument("--limit", type=int, default=12, help="maximum evidence items")
+    ask.add_argument("--json", action="store_true")
+    ask.add_argument("--no-store", action="store_true", help="delete stored copy after answering")
+    ask.set_defaults(func=cmd_ask)
+
+    graph = sub.add_parser(
+        "graph",
+        help="traceable evidence graph with stable IDs, provenance and uncertainty",
+    )
+    graph.add_argument("image_id", help="image_id from inspect_image / images")
+    graph.add_argument("--limit", type=int, default=40)
+    graph.set_defaults(func=cmd_graph)
+
+    audit = sub.add_parser(
+        "audit",
+        help="measure confident claims not supported by ground truth",
+    )
+    audit.add_argument("path", help="path to an image")
+    audit.add_argument("expected", help="ground-truth .expected.json file")
+    audit.set_defaults(func=cmd_audit)
 
     blueprint = sub.add_parser(
         "blueprint",

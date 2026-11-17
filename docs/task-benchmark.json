@@ -1,0 +1,119 @@
+{
+  "ok": true,
+  "mode": "dry-run (no model called)",
+  "model": "(none)",
+  "tasks": [
+    {
+      "id": "read_settings",
+      "question": "What does the settings screen say at the top, and what are the two buttons at the bottom?",
+      "expected": [
+        "Settings",
+        "Save",
+        "Cancel"
+      ],
+      "without_vi3ion": {
+        "answer": "DRY RUN - no model called",
+        "latency_ms": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "score": 0.0,
+        "hits": [
+          false,
+          false,
+          false
+        ]
+      },
+      "with_vi3ion": {
+        "answer": "DRY RUN - no model called",
+        "latency_ms": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "score": 0.0,
+        "hits": [
+          false,
+          false,
+          false
+        ]
+      }
+    },
+    {
+      "id": "find_element",
+      "question": "Where is the Save button? Give its pixel box.",
+      "expected": [
+        "373",
+        "619",
+        "421",
+        "640"
+      ],
+      "without_vi3ion": {
+        "answer": "DRY RUN - no model called",
+        "latency_ms": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "score": 0.0,
+        "hits": [
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "with_vi3ion": {
+        "answer": "DRY RUN - no model called",
+        "latency_ms": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "score": 0.0,
+        "hits": [
+          false,
+          false,
+          false,
+          false
+        ]
+      }
+    },
+    {
+      "id": "describe_colour",
+      "question": "What colour is the Save button text?",
+      "expected": [
+        "white",
+        "#f8f8f8"
+      ],
+      "without_vi3ion": {
+        "answer": "DRY RUN - no model called",
+        "latency_ms": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "score": 0.0,
+        "hits": [
+          false,
+          false
+        ]
+      },
+      "with_vi3ion": {
+        "answer": "DRY RUN - no model called",
+        "latency_ms": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "score": 0.0,
+        "hits": [
+          false,
+          false
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "without_vi3ion": {
+      "accuracy": 0.0,
+      "latency_ms": 0,
+      "tokens": 0
+    },
+    "with_vi3ion": {
+      "accuracy": 0.0,
+      "latency_ms": 0,
+      "tokens": 0
+    }
+  },
+  "caveat": "Fuzzy string matching on short answers; not an LLM judge. Accuracy is task completion, not brief fidelity."
+}
